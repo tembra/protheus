@@ -37,7 +37,7 @@ Local aExcel   := {}
 Local cArq     := 'MYREF120'
 Local aResult
 Local cAliasF120
-Local cDescCta, cDescCC, cNomeFor
+Local cDescCta, cDescCC, cNomeFor, dDtAquis, nVlAquis
 Local aCST := {}
 Local nPos, nI, nMax, nMaxF, nTot
 Local aMes := {}
@@ -93,6 +93,8 @@ aAdd(aExcel, {;
 				'Indicador de Origem do Processo'				,;
 				'Bem'											,;
 				'Item'										,;
+				'Data Aquisição'							,;
+				'Valor Aquisição'							,;
 				'Nota Fiscal'								,;
 				'Série'										,;
 				'Fornecedor'								,;
@@ -127,6 +129,25 @@ For nI := 1 to nMax
 				cDescCta := Posicione('CT1',1,xFilial('CT1') + (cAliasF120)->CODCONTA,'CT1_DESC01')
 				cDescCC  := Posicione('CTT',1,xFilial('CTT') + (cAliasF120)->CODCCUSTO,'CTT_DESC01')
 				cNomeFor := Posicione('SA2',1,xFilial('SA2') + (cAliasF120)->FORNECEDOR + (cAliasF120)->LOJA,'A2_NOME')
+				dDtAquis := Posicione('SN1',1,xFilial('SN1') + (cAliasF120)->BEM + (cAliasF120)->ITEM,'N1_AQUISIC')
+				nVlAquis := SN1->N1_VLAQUIS
+				If nVlAquis == 0
+					//Tipo 01=Aquisição
+					//Ocorrência 05=Implantação
+					nVlAquis := Posicione('SN4',4,xFilial('SN4') + (cAliasF120)->BEM + (cAliasF120)->ITEM + '01' + '05','N4_VLROC1')
+					If nVlAquis == 0
+						nVlAquis := SN4->N4_VLROC2
+					EndIf
+					If nVlAquis == 0
+						nVlAquis := SN4->N4_VLROC3
+					EndIf
+					If nVlAquis == 0
+						nVlAquis := SN4->N4_VLROC4
+					EndIf
+					If nVlAquis == 0
+						nVlAquis := SN4->N4_VLROC5
+					EndIf
+				EndIf
 				
 				aAdd(aExcel, {;
 								aMes[nI]                         ,;
@@ -153,6 +174,8 @@ For nI := 1 to nMax
 								IndPro((cAliasF120)->INDPRO)     ,;
 								(cAliasF120)->BEM                ,;
 								(cAliasF120)->ITEM               ,;
+								dDtAquis                         ,;
+								nVlAquis                         ,;
 								(cAliasF120)->NOTAFISCAL         ,;
 								(cAliasF120)->SERIE              ,;
 								(cAliasF120)->FORNECEDOR         ,;
