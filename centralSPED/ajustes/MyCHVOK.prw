@@ -25,8 +25,8 @@ PRIVATE ALTERA := .T.
 
 //Caso exista alguma restrição a algum campo listado, basta retira-lo do aCmpAlt.
 If _cMyES == 'E'
-	//aCmpAlt := {'FT_CHVNFE','FT_SERIE','FT_EMISSAO'}
-	aCmpAlt := {'FT_CHVNFE','FT_EMISSAO'}
+	aCmpAlt := {'FT_CHVNFE','FT_SERIE','FT_EMISSAO'}
+	//aCmpAlt := {'FT_CHVNFE','FT_EMISSAO'}
 Else
 	aCmpAlt := {'FT_CHVNFE'}
 Endif
@@ -36,6 +36,7 @@ PRIVATE nItens := 0
 PRIVATE nUsado := 0
 PRIVATE aHeader1 := {}
 PRIVATE aCols1 := {}
+PRIVATE _aMySer := {}
 PRIVATE aCols2 := {}
 PRIVATE nCtrl  := 0
 If _cMyES == 'E'
@@ -119,6 +120,7 @@ aAdd(aHeader1, {;
 
 
 aCols1 := {}
+_aMySer := {}
 
 Private cProd      := Space(15)
 Private cDesc      := Space(60)
@@ -203,6 +205,7 @@ Static Function _PESQNFE()
 	Else
 		//Limpando aCols
 		aCols1 := {}
+		_aMySer := {}
 		oGetD:aCols := {}
 		oGetD:Refresh()
 		
@@ -423,6 +426,7 @@ Static Function _PESQNFE()
 						cRet,;
 						.F.;
 					})
+					aAdd(_aMySer, TEMP1->FT_SERIE)
 				Else
 					aAdd(aCols1,{;
 						sTod(TEMP1->FT_ENTRADA),;
@@ -465,11 +469,13 @@ STATIC FUNCTION CHVOKOK()
 				cQry := " UPDATE "+RETSQLNAME('SFT')
 //				cQry += " SET FT_SERIE = '"+oGetD:aCols[ nI, nPosSERIE ]+"', "
 //				cQry += "     FT_CHVNFE = '"+oGetD:aCols[ nI, nPosCHAVE ]+"', "
-				cQry += " SET FT_CHVNFE = '"+oGetD:aCols[ nI, nPosCHAVE ]+"', "
+				cQry += " SET FT_SERIE = '"+oGetD:aCols[ nI, nPosSERIE ]+"', "
+				cQry += "     FT_CHVNFE = '"+oGetD:aCols[ nI, nPosCHAVE ]+"', "
 				cQry += "     FT_EMISSAO = '"+DTOS(oGetD:aCols[ nI, nPosDTEMI ])+"' "
 				cQry += " WHERE FT_FILIAL = '"+XFILIAL('SFT')+"'"
 				cQry += " AND FT_NFISCAL  = '"+oGetD:aCols[ nI, nPosDOC ]+"'"
-				cQry += " AND FT_SERIE    = '"+oGetD:aCols[ nI, nPosSERIE ]+"'"
+//				cQry += " AND FT_SERIE    = '"+oGetD:aCols[ nI, nPosSERIE ]+"'"
+				cQry += " AND FT_SERIE    = '"+_aMySer[ nI ]+"'"
 				cQry += " AND FT_ENTRADA  = '"+dTos(oGetD:aCols[ nI, nPosDTENT ])+"'"
 				cQry += " AND FT_TIPOMOV  = 'E'"
 				cQry += " AND FT_ESPECIE  IN ('CTE', 'SPED')"
@@ -483,11 +489,13 @@ STATIC FUNCTION CHVOKOK()
 				cQry := " UPDATE "+RETSQLNAME('SF3')
 //				cQry += " SET F3_SERIE = '"+oGetD:aCols[ nI, nPosSERIE ]+"', "
 //				cQry += "     F3_CHVNFE = '"+oGetD:aCols[ nI, nPosCHAVE ]+"', "
-				cQry += " SET F3_CHVNFE = '"+oGetD:aCols[ nI, nPosCHAVE ]+"', "
+				cQry += " SET F3_SERIE = '"+oGetD:aCols[ nI, nPosSERIE ]+"', "
+				cQry += "     F3_CHVNFE = '"+oGetD:aCols[ nI, nPosCHAVE ]+"', "
 				cQry += "     F3_EMISSAO = '"+DTOS(oGetD:aCols[ nI, nPosDTEMI ])+"' "
 				cQry += " WHERE F3_FILIAL = '"+XFILIAL('SF3')+"'"
 				cQry += " AND F3_NFISCAL  = '"+oGetD:aCols[ nI, nPosDOC ]+"'"
-				cQry += " AND F3_SERIE    = '"+oGetD:aCols[ nI, nPosSERIE ]+"'"
+//				cQry += " AND F3_SERIE    = '"+oGetD:aCols[ nI, nPosSERIE ]+"'"
+				cQry += " AND F3_SERIE    = '"+_aMySer[ nI ]+"'"
 				cQry += " AND F3_ENTRADA  = '"+dTos(oGetD:aCols[ nI, nPosDTENT ])+"'"
 				cQry += " AND F3_CFO  < '5000'"
 				cQry += " AND F3_ESPECIE  IN ('CTE', 'SPED')"
@@ -501,11 +509,13 @@ STATIC FUNCTION CHVOKOK()
 				cQry := " UPDATE "+RETSQLNAME('SF1')
 //				cQry += " SET F1_SERIE = '"+oGetD:aCols[ nI, nPosSERIE ]+"', "
 //				cQry += "     F1_CHVNFE = '"+oGetD:aCols[ nI, nPosCHAVE ]+"', "
-				cQry += " SET F1_CHVNFE = '"+oGetD:aCols[ nI, nPosCHAVE ]+"', "
+				cQry += " SET F1_SERIE = '"+oGetD:aCols[ nI, nPosSERIE ]+"', "
+				cQry += "     F1_CHVNFE = '"+oGetD:aCols[ nI, nPosCHAVE ]+"', "
 				cQry += "     F1_EMISSAO = '"+DTOS(oGetD:aCols[ nI, nPosDTEMI ])+"' "
 				cQry += " WHERE F1_FILIAL = '"+XFILIAL('SF1')+"'"
 				cQry += " AND F1_DOC  = '"+oGetD:aCols[ nI, nPosDOC ]+"'"
-				cQry += " AND F1_SERIE    = '"+oGetD:aCols[ nI, nPosSERIE ]+"'"
+//				cQry += " AND F1_SERIE    = '"+oGetD:aCols[ nI, nPosSERIE ]+"'"
+				cQry += " AND F1_SERIE    = '"+_aMySer[ nI ]+"'"
 				cQry += " AND F1_DTDIGIT  = '"+dTos(oGetD:aCols[ nI, nPosDTENT ])+"'"
 				cQry += " AND F1_ESPECIE  IN ('CTE', 'SPED')"
 				cQry += " AND F1_FORNECE  = '"+oGetD:aCols[ nI, nPosFORNE ]+"'"
@@ -518,10 +528,12 @@ STATIC FUNCTION CHVOKOK()
 				cQry := " UPDATE "+RETSQLNAME('SD1')
 //				cQry += " SET D1_SERIE = '"+oGetD:aCols[ nI, nPosSERIE ]+"', "
 //				cQry += "     D1_EMISSAO = '"+DTOS(oGetD:aCols[ nI, nPosDTEMI ])+"' "
-				cQry += " SET D1_EMISSAO = '"+DTOS(oGetD:aCols[ nI, nPosDTEMI ])+"' "
+				cQry += " SET D1_SERIE = '"+oGetD:aCols[ nI, nPosSERIE ]+"', "
+				cQry += "     D1_EMISSAO = '"+DTOS(oGetD:aCols[ nI, nPosDTEMI ])+"' "
 				cQry += " WHERE D1_FILIAL = '"+XFILIAL('SD1')+"'"
 				cQry += " AND D1_DOC  = '"+oGetD:aCols[ nI, nPosDOC ]+"'"
-				cQry += " AND D1_SERIE    = '"+oGetD:aCols[ nI, nPosSERIE ]+"'"
+//				cQry += " AND D1_SERIE    = '"+oGetD:aCols[ nI, nPosSERIE ]+"'"
+				cQry += " AND D1_SERIE    = '"+_aMySer[ nI ]+"'"
 				cQry += " AND D1_DTDIGIT  = '"+dTos(oGetD:aCols[ nI, nPosDTENT ])+"'"
 				cQry += " AND D1_FORNECE  = '"+oGetD:aCols[ nI, nPosFORNE ]+"'"
 				cQry += " AND D1_LOJA  = '"+oGetD:aCols[ nI, nPosLOJA ]+"'"
@@ -577,6 +589,7 @@ STATIC FUNCTION CHVOKOK()
 	Next nI
 	end transaction
 	//Limpando o oGetD:aCols
+	_aMySer := {}
 	oGetD:aCols := {}
 	oGetD:Refresh()
 RETURN NIL

@@ -1,28 +1,49 @@
+#Include 'rwmake.ch'
+#Include 'protheus.ch'
 #Include 'fileio.ch'
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-User Function MyLeArq(cArquivo)
+User Function MyLeArq(cArquivo, lString)
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // DATA       : 02/12/2010
 // USER       : THIERES TEMBRA
 // ACAO       : LE UM ARQUIVO PARA UM ARRAY
-// RETORNO    : Array
+// RETORNO    : Array / String
 // PARÂMETROS : cArquivo - Caminho do arquivo
+//            : lString  - Identifica se o retorno será em string
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+	Local uRet := Nil
 	Local aRetorno := {}
+	Local cRetorno := ''
 	Local cLinha
+	Default lString := .F.
 	
 	If !File(cArquivo)
-		Return aClone(aRetorno)
+		If lString
+			uRet := cRetorno
+		Else
+			uRet := aClone(aRetorno)
+		EndIf
+		Return uRet
 	EndIf
 	
 	fT_fUse(cArquivo)
 	fT_fGoTop()
 	
 	While (!fT_fEof())
-	     cLinha := fT_fReadLn()
-	     aAdd(aRetorno, cLinha)
-	     fT_fSkip()
-	End While
+		cLinha := fT_fReadLn()
+		If lString
+			cRetorno += cLinha
+		Else
+			aAdd(aRetorno, cLinha)
+		EndIf
+		fT_fSkip()
+	EndDo
 	
 	fT_fUse()
-Return aClone(aRetorno)
+	
+	If lString
+		uRet := cRetorno
+	Else
+		uRet := aClone(aRetorno)
+	EndIf
+Return uRet

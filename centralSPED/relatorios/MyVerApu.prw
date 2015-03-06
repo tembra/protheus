@@ -70,8 +70,6 @@ nAteAno := Val(Left(MV_PAR02,4))
 
 nQtd := ((nAteAno - nDoAno - 1) * 12) + (13 - nDoMes) + nAteMes
 
-Alert(nQtd)
-
 ProcRegua(nQtd)
 
 //aumenta um mês no final para utilizar no loop abaixo
