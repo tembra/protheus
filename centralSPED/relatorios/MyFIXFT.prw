@@ -13,6 +13,8 @@ User Function MyFIXFT()
 Local cTitulo := 'Comparação Red. Z x Cupom (SFI x SFT x SD2)'
 Local cPerg := '#MyFIFTD2'
 
+Private _cNoLock := ''
+
 CriaSX1(cPerg)
 
 If !Pergunte(cPerg, .T., cTitulo)
@@ -31,6 +33,11 @@ ElseIf MV_PAR03 == Nil .or. MV_PAR03 == '' .or. MV_PAR04 == Nil .or. MV_PAR04 ==
 ElseIf MV_PAR03 > MV_PAR04
 	Alert('A filial final deve ser maior que a filial inicial.')
 	Return Nil
+EndIf
+
+//ativa NOLOCK nas queries SQL caso seja referente a um ano anterior do corrente
+If Year(MV_PAR02) < Year(Date())
+	_cNoLock := 'WITH (NOLOCK)'
 EndIf
 
 MsAguarde({|| Executa(cTitulo) },cTitulo,'Aguarde...')
@@ -97,7 +104,7 @@ aAdd(aExcel, {'FILIAL', 'DATA', 'PDV', 'Num RED Z', 'NUM ECF','Val FI', 'Val FT'
 
 While dMyData <= dMyDataAte
 	cQry := " SELECT FI_FILIAL, FI_DTMOVTO, FI_PDV, FI_NUMERO, FI_NUMREDZ, FI_SERPDV, FI_NUMINI, FI_NUMFIM, ROUND(SUM(FI_VALCON),2) VALCONT "
-	cQry += " FROM "+RetSqlName('SFI')
+	cQry += " FROM "+RetSqlName('SFI') + " " + _cNoLock
 	cQry += " WHERE FI_DTMOVTO = '"+DTOS(dMyData)+"'"
 	cQry += "   AND D_E_L_E_T_ <> '*'"
 	cQry += "   AND FI_FILIAL >= '"+MV_PAR03+"'"
@@ -113,7 +120,7 @@ While dMyData <= dMyDataAte
 	
 	cQry := " SELECT FT_FILIAL, FT_ENTRADA, FT_PDV, ROUND(SUM(VALCONT),2) AS VALCONT, MIN(SSFT.FT_NFISCAL) AS MINNFIS, MAX(SSFT.FT_NFISCAL) AS MAXNFIS FROM"
 	cQry += " (SELECT FT_FILIAL, FT_ENTRADA, FT_PDV, FT_NFISCAL, ROUND(SUM(FT_VALCONT),2) VALCONT "
-	cQry += " FROM "+RetSqlName('SFT')
+	cQry += " FROM "+RetSqlName('SFT') + " " + _cNoLock
 	cQry += " WHERE FT_ENTRADA = '"+DTOS(dMyData)+"'"
 	cQry += "   AND LEFT(FT_CFOP,1) >= '5'"
 	cQry += "   AND D_E_L_E_T_ <> '*'"
@@ -140,7 +147,7 @@ While dMyData <= dMyDataAte
 	
 	cQry := " SELECT SSD2.D2_FILIAL, SSD2.D2_EMISSAO, SSD2.D2_PDV, ROUND(SUM(SSD2.VALCONT),2) AS VALCONT, MIN(SSD2.D2_DOC) AS MINDOC, MAX(SSD2.D2_DOC) AS MAXDOC FROM "
 	cQry += " (SELECT D2_FILIAL, D2_EMISSAO, D2_PDV, D2_DOC, ROUND(SUM(D2_TOTAL),2) VALCONT "
-	cQry += " FROM "+RetSqlName('SD2')
+	cQry += " FROM "+RetSqlName('SD2') + " " + _cNoLock
 	cQry += " WHERE D2_EMISSAO = '"+DTOS(dMyData)+"'"
 	cQry += "   AND LEFT(D2_CF,1) >= '5'"
 	cQry += "   AND D_E_L_E_T_ <> '*'"

@@ -23,6 +23,8 @@ User Function MyNCMTip()
 Local cTitulo := 'Relação de Produtos que possuem NCM divergentes da tabela TIPI'
 Local cPerg := '#MyNCMTip'
 
+Private _cNoLock := ''
+
 CriaSX1(cPerg)
 
 If !Pergunte(cPerg, .T., cTitulo)
@@ -41,6 +43,11 @@ EndIf
 
 If AllTrim(MV_PAR04) == ''
 	MV_PAR04 := Left(DTOS(Date()),4)
+EndIf
+
+//ativa NOLOCK nas queries SQL caso seja referente a um ano anterior do corrente
+If Year(MV_PAR03) < Year(Date())
+	_cNoLock := 'WITH (NOLOCK)'
 EndIf
 
 MsAguarde({|| Aguarde(cTitulo) },'Aguarde','Realizando consulta...')
@@ -78,8 +85,8 @@ If MV_PAR01 == 1
 	cQry += CRLF + "   ,ZYD_COD"
 	cQry += CRLF + "   ,ZYD_VALID"
 	cQry += CRLF + "   ,ZYD_DESC"
-	cQry += CRLF + " FROM " + RetSqlName('SB1') + " SB1"
-	cQry += CRLF + " LEFT JOIN " + RetSqlName('ZYD') + " ZYD"
+	cQry += CRLF + " FROM " + RetSqlName('SB1') + " SB1 " + _cNoLock
+	cQry += CRLF + " LEFT JOIN " + RetSqlName('ZYD') + " ZYD " + _cNoLock
 	cQry += CRLF + " ON  ZYD.D_E_L_E_T_ <> '*'"
 	cQry += CRLF + " AND ZYD_FILIAL = '" + xFilial('SYD') + "'"
 	cQry += CRLF + " AND ZYD_COD = B1_POSIPI"
@@ -106,8 +113,8 @@ Else
 	cQry += CRLF + "   ,ZYD_COD"
 	cQry += CRLF + "   ,ZYD_VALID"
 	cQry += CRLF + "   ,ZYD_DESC"
-	cQry += CRLF + " FROM " + RetSqlName('SB1') + " SB1"
-	cQry += CRLF + " LEFT JOIN " + RetSqlName('ZYD') + " ZYD"
+	cQry += CRLF + " FROM " + RetSqlName('SB1') + " SB1 " + _cNoLock
+	cQry += CRLF + " LEFT JOIN " + RetSqlName('ZYD') + " ZYD " + _cNoLock
 	cQry += CRLF + " ON  ZYD.D_E_L_E_T_ <> '*'"
 	cQry += CRLF + " AND ZYD_FILIAL = '" + xFilial('SYD') + "'"
 	cQry += CRLF + " AND ZYD_COD = B1_POSIPI"
@@ -124,7 +131,7 @@ Else
 	cQry += CRLF + "   AND B1_COD IN ("
 	cQry += CRLF + "     SELECT"
 	cQry += CRLF + "        FT_PRODUTO"
-	cQry += CRLF + "     FROM " + RetSqlName('SFT') + " SFT"
+	cQry += CRLF + "     FROM " + RetSqlName('SFT') + " SFT " + _cNoLock
 	cQry += CRLF + "     WHERE SFT.D_E_L_E_T_ <> '*'"
 	cQry += CRLF + "       AND FT_FILIAL = '" + xFilial('SFT') + "'"
 	cQry += CRLF + "       AND FT_ENTRADA BETWEEN '" + DTOS(MV_PAR02) + "' AND '" + DTOS(MV_PAR03) + "'"
@@ -252,15 +259,15 @@ If nTipo == 0
 ElseIf nTipo == 1
 	cQry += CRLF + "   ,A1_NOME    AS NOME"
 EndIf
-cQry += CRLF + " FROM " + RetSqlName('SFT') + " SFT"
+cQry += CRLF + " FROM " + RetSqlName('SFT') + " SFT " + _cNoLock
 If nTipo == 0
-	cQry += CRLF + " LEFT JOIN " + RetSqlName('SA2') + " SA2"
+	cQry += CRLF + " LEFT JOIN " + RetSqlName('SA2') + " SA2 " + _cNoLock
 	cQry += CRLF + " ON  SA2.D_E_L_E_T_ <> '*'"
 	cQry += CRLF + " AND A2_FILIAL = '" + xFilial('SA2') + "'"
 	cQry += CRLF + " AND A2_COD = FT_CLIEFOR"
 	cQry += CRLF + " AND A2_LOJA = FT_LOJA
 ElseIf nTipo == 1
-	cQry += CRLF + " LEFT JOIN " + RetSqlName('SA1') + " SA1"
+	cQry += CRLF + " LEFT JOIN " + RetSqlName('SA1') + " SA1 " + _cNoLock
 	cQry += CRLF + " ON  SA1.D_E_L_E_T_ <> '*'"
 	cQry += CRLF + " AND A1_FILIAL = '" + xFilial('SA1') + "'"
 	cQry += CRLF + " AND A1_COD = FT_CLIEFOR"

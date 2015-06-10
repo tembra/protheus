@@ -34,6 +34,7 @@ Local nMax, nMaxX
 Local nPos
 Local lGera
 Local cAux1, cAux2, cAux3
+Local cNoLock := ''
 Local aEntSai := {;
 	{'',''},;
 	{'',''} ;
@@ -41,6 +42,11 @@ Local aEntSai := {;
 
 Default cFilAte := ''
 Default cFilCST := ''
+
+//ativa NOLOCK nas queries SQL caso seja referente a um ano anterior do corrente
+If Year(dData2) < Year(Date())
+	cNoLock := 'WITH (NOLOCK)'
+EndIf
 
 If !SX6->(dbSeek('  MY_NATEPC '))
     RecLock('SX6',.T.)
@@ -108,8 +114,8 @@ If AllTrim(aEntSai[2][1]) <> ''
 	cQry += CRLF + "       ,E1_NATUREZ            AS NATUREZA"
 	cQry += CRLF + "       ,''                    AS CC"
 	cQry += CRLF + "       ,(E1_VALOR-E1_VALCOM5) AS VALOR"
-	cQry += CRLF + " FROM " + RetSqlName('SE1') + " AS SE1"
-	cQry += CRLF + " LEFT JOIN " + RetSqlName('SA1') + " AS SA1"
+	cQry += CRLF + " FROM " + RetSqlName('SE1') + " AS SE1 " + cNoLock
+	cQry += CRLF + " LEFT JOIN " + RetSqlName('SA1') + " AS SA1 " + cNoLock
 	cQry += CRLF + " ON  SA1.D_E_L_E_T_ <> '*'"
 	If AllTrim(xFilial('SA1')) == ''
 		cQry += CRLF + " AND A1_FILIAL = ''"
@@ -146,8 +152,8 @@ If AllTrim(aEntSai[2][2]) <> ''
 	cQry += CRLF + "       ,E2_NATUREZ     AS NATUREZA"
 	cQry += CRLF + "       ,E2_CCD         AS CC"
 	cQry += CRLF + "       ,E2_VALOR       AS VALOR"
-	cQry += CRLF + " FROM " + RetSqlName('SE2') + " AS SE2"
-	cQry += CRLF + " LEFT JOIN " + RetSqlName('SA2') + " AS SA2"
+	cQry += CRLF + " FROM " + RetSqlName('SE2') + " AS SE2 " + cNoLock
+	cQry += CRLF + " LEFT JOIN " + RetSqlName('SA2') + " AS SA2 " + cNoLock
 	cQry += CRLF + " ON  SA2.D_E_L_E_T_ <> '*'"
 	If AllTrim(xFilial('SA2')) == ''
 		cQry += CRLF + " AND A2_FILIAL = ''"
@@ -156,7 +162,7 @@ If AllTrim(aEntSai[2][2]) <> ''
 	EndIf
 	cQry += CRLF + " AND A2_COD = E2_FORNECE"
 	cQry += CRLF + " AND A2_LOJA = E2_LOJA"
-	cQry += CRLF + " LEFT JOIN " + RetSqlName('CTT') + " AS CTT"
+	cQry += CRLF + " LEFT JOIN " + RetSqlName('CTT') + " AS CTT " + cNoLock
 	cQry += CRLF + " ON  CTT.D_E_L_E_T_ <> '*'"
 	If AllTrim(xFilial('CTT')) == ''
 		cQry += CRLF + " AND CTT_FILIAL = ''"

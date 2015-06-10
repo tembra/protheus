@@ -11,6 +11,8 @@ User Function MyFTProb()
 Local cTitulo := 'Relação de problemas encontrados no Livro Fiscal'
 Local cPerg := '#MyFTProb'
 
+Private _cNoLock := ''
+
 CriaSX1(cPerg)
 
 If !Pergunte(cPerg, .T., cTitulo)
@@ -23,6 +25,11 @@ If MV_PAR01 == Nil .or. MV_PAR01 == CTOD('') .or. MV_PAR02 == Nil .or. MV_PAR02 
 ElseIf MV_PAR01 > MV_PAR02
 	Alert('A data final deve ser maior que a data inicial.')
 	Return Nil
+EndIf
+
+//ativa NOLOCK nas queries SQL caso seja referente a um ano anterior do corrente
+If Year(MV_PAR02) < Year(Date())
+	_cNoLock := 'WITH (NOLOCK)'
 EndIf
 
 Processa({|| Executa(cTitulo) },cTitulo,'Realizando consulta...')
@@ -112,7 +119,7 @@ If nTipo == 1
 	cQry += CRLF + "   ,FT_ESPECIE"
 	cQry += CRLF + "   ,FT_ITEM"
 	cQry += CRLF + "   ,FT_QUANT"
-	cQry += CRLF + " FROM " + RetSqlName('SFT')
+	cQry += CRLF + " FROM " + RetSqlName('SFT') + " " + _cNoLock
 	cQry += CRLF + " WHERE D_E_L_E_T_ <> '*'"
 	cQry += CRLF + "   AND FT_FILIAL = '" + xFilial('SFT') + "'"
 	cQry += CRLF + "   AND FT_PRODUTO = ''"
@@ -140,8 +147,8 @@ ElseIf nTipo == 2
 	cQry += CRLF + "   ,FT_ITEM"
 	cQry += CRLF + "   ,FT_QUANT"
 	cQry += CRLF + "   ,FT_PRODUTO"
-	cQry += CRLF + " FROM " + RetSqlName('SFT') + " SFT"
-	cQry += CRLF + " LEFT JOIN " + RetSqlName('SB1') + " SB1"
+	cQry += CRLF + " FROM " + RetSqlName('SFT') + " SFT " + _cNoLock
+	cQry += CRLF + " LEFT JOIN " + RetSqlName('SB1') + " SB1 " + _cNoLock
 	cQry += CRLF + " ON  SB1.D_E_L_E_T_ <> '*'"
 	cQry += CRLF + " AND B1_FILIAL = '" + xFilial('SB1') + "'"
 	cQry += CRLF + " AND B1_COD = FT_PRODUTO"
@@ -168,7 +175,7 @@ ElseIf nTipo == 3
 	cQry += CRLF + "   ,FT_EMISSAO"
 	cQry += CRLF + "   ,FT_ESPECIE"
 	cQry += CRLF + "   ,SUM(FT_VALCONT) AS VALCONT"
-	cQry += CRLF + " FROM " + RetSqlName('SFT')
+	cQry += CRLF + " FROM " + RetSqlName('SFT') + " " + _cNoLock
 	cQry += CRLF + " WHERE D_E_L_E_T_ <> '*'"
 	cQry += CRLF + "   AND FT_FILIAL = '" + xFilial('SFT') + "'"
 	cQry += CRLF + "   AND ("
@@ -205,8 +212,8 @@ ElseIf nTipo == 4
 	cQry += CRLF + "   ,FT_ESPECIE"
 	cQry += CRLF + "   ,FT_TIPO"
 	cQry += CRLF + "   ,SUM(FT_VALCONT) AS VALCONT"
-	cQry += CRLF + " FROM " + RetSqlName('SFT') + " SFT"
-	cQry += CRLF + " LEFT JOIN " + RetSqlName('SA1') + " SA1"
+	cQry += CRLF + " FROM " + RetSqlName('SFT') + " SFT " + _cNoLock
+	cQry += CRLF + " LEFT JOIN " + RetSqlName('SA1') + " SA1 " + _cNoLock
 	cQry += CRLF + " ON  SA1.D_E_L_E_T_ <> '*'"
 	cQry += CRLF + " AND A1_FILIAL = '" + xFilial('SA1') + "'"
 	cQry += CRLF + " AND A1_COD = FT_CLIEFOR"
@@ -244,8 +251,8 @@ ElseIf nTipo == 4
 	cQry += CRLF + "   ,FT_ESPECIE"
 	cQry += CRLF + "   ,FT_TIPO"
 	cQry += CRLF + "   ,SUM(FT_VALCONT) AS VALCONT"
-	cQry += CRLF + " FROM " + RetSqlName('SFT') + " SFT"
-	cQry += CRLF + " LEFT JOIN " + RetSqlName('SA1') + " SA1"
+	cQry += CRLF + " FROM " + RetSqlName('SFT') + " SFT " + _cNoLock
+	cQry += CRLF + " LEFT JOIN " + RetSqlName('SA1') + " SA1 " + _cNoLock
 	cQry += CRLF + " ON  SA1.D_E_L_E_T_ <> '*'"
 	cQry += CRLF + " AND A1_FILIAL = '" + xFilial('SA1') + "'"
 	cQry += CRLF + " AND A1_COD = FT_CLIEFOR"
@@ -290,8 +297,8 @@ ElseIf nTipo == 5
 	cQry += CRLF + "   ,FT_ESPECIE"
 	cQry += CRLF + "   ,FT_TIPO"
 	cQry += CRLF + "   ,SUM(FT_VALCONT) AS VALCONT"
-	cQry += CRLF + " FROM " + RetSqlName('SFT') + " SFT"
-	cQry += CRLF + " LEFT JOIN " + RetSqlName('SA2') + " SA2"
+	cQry += CRLF + " FROM " + RetSqlName('SFT') + " SFT " + _cNoLock
+	cQry += CRLF + " LEFT JOIN " + RetSqlName('SA2') + " SA2 " + _cNoLock
 	cQry += CRLF + " ON  SA2.D_E_L_E_T_ <> '*'"
 	cQry += CRLF + " AND A2_FILIAL = '" + xFilial('SA2') + "'"
 	cQry += CRLF + " AND A2_COD = FT_CLIEFOR"
@@ -329,8 +336,8 @@ ElseIf nTipo == 5
 	cQry += CRLF + "   ,FT_ESPECIE"
 	cQry += CRLF + "   ,FT_TIPO"
 	cQry += CRLF + "   ,SUM(FT_VALCONT) AS VALCONT"
-	cQry += CRLF + " FROM " + RetSqlName('SFT') + " SFT"
-	cQry += CRLF + " LEFT JOIN " + RetSqlName('SA2') + " SA2"
+	cQry += CRLF + " FROM " + RetSqlName('SFT') + " SFT " + _cNoLock
+	cQry += CRLF + " LEFT JOIN " + RetSqlName('SA2') + " SA2 " + _cNoLock
 	cQry += CRLF + " ON  SA2.D_E_L_E_T_ <> '*'"
 	cQry += CRLF + " AND A2_FILIAL = '" + xFilial('SA2') + "'"
 	cQry += CRLF + " AND A2_COD = FT_CLIEFOR"

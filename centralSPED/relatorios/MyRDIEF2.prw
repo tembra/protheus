@@ -10,6 +10,8 @@ User Function MyRDIEF2()
 Local cTitulo := 'Relatório Anexo II - DIEF'
 Local cPerg := '#MYRDIEF2'
 
+Private _cNoLock := ''
+
 CriaSX1(cPerg)
 
 If !Pergunte(cPerg, .T., cTitulo)
@@ -22,6 +24,11 @@ If MV_PAR01 == Nil .or. MV_PAR01 == CTOD('') .or. MV_PAR02 == Nil .or. MV_PAR02 
 ElseIf MV_PAR01 > MV_PAR02
 	Alert('A data final deve ser maior que a data inicial.')
 	Return Nil
+EndIf
+
+//ativa NOLOCK nas queries SQL caso seja referente a um ano anterior do corrente
+If Year(MV_PAR02) < Year(Date())
+	_cNoLock := 'WITH (NOLOCK)'
 EndIf
 
 Processa({|| Executa(cTitulo) },cTitulo,'Aguarde...')
@@ -124,13 +131,13 @@ If cNat == '1'
 	cQry += CRLF + "   ,LEFT(FT_CFOP,1) AS CFOP"
 	cQry += CRLF + "   ,SUM(FT_VALCONT) AS VALOR"
 	cQry += CRLF + "   ,SUM(FT_ICMSRET) AS ICMSRET"
-	cQry += CRLF + " FROM " + RetSqlName('SFT') + " SFT"
-	cQry += CRLF + " LEFT JOIN " + RetSqlName('SA2') + " SA2"
+	cQry += CRLF + " FROM " + RetSqlName('SFT') + " SFT " + _cNoLock
+	cQry += CRLF + " LEFT JOIN " + RetSqlName('SA2') + " SA2 " + _cNoLock
 	cQry += CRLF + " ON  SA2.D_E_L_E_T_ <> '*'"
 	cQry += CRLF + " AND A2_FILIAL = '" + xFilial('SA2') + "'"
 	cQry += CRLF + " AND A2_COD = FT_CLIEFOR"
 	cQry += CRLF + " AND A2_LOJA = FT_LOJA"
-	cQry += CRLF + " LEFT JOIN " + RetSqlName('SD1') + " SD1"
+	cQry += CRLF + " LEFT JOIN " + RetSqlName('SD1') + " SD1 " + _cNoLock
 	cQry += CRLF + " ON  SD1.D_E_L_E_T_ <> '*'"
 	cQry += CRLF + " AND D1_FILIAL = '" + xFilial('SD1') + "'"
 	cQry += CRLF + " AND D1_DOC = FT_NFISCAL"
@@ -139,11 +146,11 @@ If cNat == '1'
 	cQry += CRLF + " AND D1_LOJA = FT_LOJA"
 	cQry += CRLF + " AND D1_COD = FT_PRODUTO"
 	cQry += CRLF + " AND D1_ITEM = FT_ITEM"
-	cQry += CRLF + " LEFT JOIN " + RetSqlName('SF4') + " SF4"
+	cQry += CRLF + " LEFT JOIN " + RetSqlName('SF4') + " SF4 " + _cNoLock
 	cQry += CRLF + " ON  SF4.D_E_L_E_T_ <> '*'"
 	cQry += CRLF + " AND F4_FILIAL = '" + xFilial('SF4') + "'"
 	cQry += CRLF + " AND F4_CODIGO = D1_TES"
-	cQry += CRLF + " LEFT JOIN " + RetSqlName('SB1') + " SB1"
+	cQry += CRLF + " LEFT JOIN " + RetSqlName('SB1') + " SB1 " + _cNoLock
 	cQry += CRLF + " ON  SB1.D_E_L_E_T_ <> '*'"
 	cQry += CRLF + " AND B1_FILIAL = '" + xFilial('SB1') + "'"
 	cQry += CRLF + " AND B1_COD = FT_PRODUTO"
@@ -176,13 +183,13 @@ If cNat == '1'
 	cQry += CRLF + "   ,LEFT(FT_CFOP,1) AS CFOP"
 	cQry += CRLF + "   ,SUM(FT_VALCONT) AS VALOR"
 	cQry += CRLF + "   ,SUM(FT_ICMSRET) AS ICMSRET"
-	cQry += CRLF + " FROM " + RetSqlName('SFT') + " SFT"
-	cQry += CRLF + " LEFT JOIN " + RetSqlName('SA1') + " SA1"
+	cQry += CRLF + " FROM " + RetSqlName('SFT') + " SFT " + _cNoLock
+	cQry += CRLF + " LEFT JOIN " + RetSqlName('SA1') + " SA1 " + _cNoLock
 	cQry += CRLF + " ON  SA1.D_E_L_E_T_ <> '*'"
 	cQry += CRLF + " AND A1_FILIAL = '" + xFilial('SA1') + "'"
 	cQry += CRLF + " AND A1_COD = FT_CLIEFOR"
 	cQry += CRLF + " AND A1_LOJA = FT_LOJA"
-	cQry += CRLF + " LEFT JOIN " + RetSqlName('SD1') + " SD1"
+	cQry += CRLF + " LEFT JOIN " + RetSqlName('SD1') + " SD1 " + _cNoLock
 	cQry += CRLF + " ON  SD1.D_E_L_E_T_ <> '*'"
 	cQry += CRLF + " AND D1_FILIAL = '" + xFilial('SD1') + "'"
 	cQry += CRLF + " AND D1_DOC = FT_NFISCAL"
@@ -191,11 +198,11 @@ If cNat == '1'
 	cQry += CRLF + " AND D1_LOJA = FT_LOJA"
 	cQry += CRLF + " AND D1_COD = FT_PRODUTO"
 	cQry += CRLF + " AND D1_ITEM = FT_ITEM"
-	cQry += CRLF + " LEFT JOIN " + RetSqlName('SF4') + " SF4"
+	cQry += CRLF + " LEFT JOIN " + RetSqlName('SF4') + " SF4 " + _cNoLock
 	cQry += CRLF + " ON  SF4.D_E_L_E_T_ <> '*'"
 	cQry += CRLF + " AND F4_FILIAL = '" + xFilial('SF4') + "'"
 	cQry += CRLF + " AND F4_CODIGO = D1_TES"
-	cQry += CRLF + " LEFT JOIN " + RetSqlName('SB1') + " SB1"
+	cQry += CRLF + " LEFT JOIN " + RetSqlName('SB1') + " SB1 " + _cNoLock
 	cQry += CRLF + " ON  SB1.D_E_L_E_T_ <> '*'"
 	cQry += CRLF + " AND B1_FILIAL = '" + xFilial('SB1') + "'"
 	cQry += CRLF + " AND B1_COD = FT_PRODUTO"
@@ -267,13 +274,13 @@ ElseIf cNat == '2'
 	cQry += CRLF + "   ,ZZF_DESC AS MUNDESC"
 	cQry += CRLF + "   ,SUM(FT_VALCONT) AS VALOR"
 	cQry += CRLF + "   ,SUM(FT_ICMSRET) AS ICMSRET"
-	cQry += CRLF + " FROM " + RetSqlName('SFT') + " SFT"
-	cQry += CRLF + " LEFT JOIN " + RetSqlName('SA1') + " SA1"
+	cQry += CRLF + " FROM " + RetSqlName('SFT') + " SFT " + _cNoLock
+	cQry += CRLF + " LEFT JOIN " + RetSqlName('SA1') + " SA1 " + _cNoLock
 	cQry += CRLF + " ON  SA1.D_E_L_E_T_ <> '*'"
 	cQry += CRLF + " AND A1_FILIAL = '" + xFilial('SA1') + "'"
 	cQry += CRLF + " AND A1_COD = FT_CLIEFOR"
 	cQry += CRLF + " AND A1_LOJA = FT_LOJA"
-	cQry += CRLF + " LEFT JOIN " + RetSqlName('SD2') + " SD2"
+	cQry += CRLF + " LEFT JOIN " + RetSqlName('SD2') + " SD2 " + _cNoLock
 	cQry += CRLF + " ON  SD2.D_E_L_E_T_ <> '*'"
 	cQry += CRLF + " AND D2_FILIAL = '" + xFilial('SD2') + "'"
 	cQry += CRLF + " AND D2_DOC = FT_NFISCAL"
@@ -282,15 +289,15 @@ ElseIf cNat == '2'
 	cQry += CRLF + " AND D2_LOJA = FT_LOJA"
 	cQry += CRLF + " AND D2_COD = FT_PRODUTO"
 	cQry += CRLF + " AND D2_ITEM = FT_ITEM"
-	cQry += CRLF + " LEFT JOIN " + RetSqlName('SF4') + " SF4"
+	cQry += CRLF + " LEFT JOIN " + RetSqlName('SF4') + " SF4 " + _cNoLock
 	cQry += CRLF + " ON  SF4.D_E_L_E_T_ <> '*'"
 	cQry += CRLF + " AND F4_FILIAL = '" + xFilial('SF4') + "'"
 	cQry += CRLF + " AND F4_CODIGO = D2_TES"
-	cQry += CRLF + " LEFT JOIN " + RetSqlName('SB1') + " SB1"
+	cQry += CRLF + " LEFT JOIN " + RetSqlName('SB1') + " SB1 " + _cNoLock
 	cQry += CRLF + " ON  SB1.D_E_L_E_T_ <> '*'"
 	cQry += CRLF + " AND B1_FILIAL = '" + xFilial('SB1') + "'"
 	cQry += CRLF + " AND B1_COD = FT_PRODUTO"
-	cQry += CRLF + " LEFT JOIN " + RetSqlName('ZZF') + " ZZF"
+	cQry += CRLF + " LEFT JOIN " + RetSqlName('ZZF') + " ZZF " + _cNoLock
 	cQry += CRLF + " ON  ZZF.D_E_L_E_T_ <> '*'"
 	cQry += CRLF + " AND ZZF_FILIAL = '" + xFilial('ZZF') + "'"
 	cQry += CRLF + " AND ZZF_UF = A1_EST"
@@ -327,13 +334,13 @@ ElseIf cNat == '2'
 	cQry += CRLF + "   ,ZZF_DESC AS MUNDESC"
 	cQry += CRLF + "   ,SUM(FT_VALCONT) AS VALOR"
 	cQry += CRLF + "   ,SUM(FT_ICMSRET) AS ICMSRET"
-	cQry += CRLF + " FROM " + RetSqlName('SFT') + " SFT"
-	cQry += CRLF + " LEFT JOIN " + RetSqlName('SA2') + " SA2"
+	cQry += CRLF + " FROM " + RetSqlName('SFT') + " SFT " + _cNoLock
+	cQry += CRLF + " LEFT JOIN " + RetSqlName('SA2') + " SA2 " + _cNoLock
 	cQry += CRLF + " ON  SA2.D_E_L_E_T_ <> '*'"
 	cQry += CRLF + " AND A2_FILIAL = '" + xFilial('SA2') + "'"
 	cQry += CRLF + " AND A2_COD = FT_CLIEFOR"
 	cQry += CRLF + " AND A2_LOJA = FT_LOJA"
-	cQry += CRLF + " LEFT JOIN " + RetSqlName('SD2') + " SD2"
+	cQry += CRLF + " LEFT JOIN " + RetSqlName('SD2') + " SD2 " + _cNoLock
 	cQry += CRLF + " ON  SD2.D_E_L_E_T_ <> '*'"
 	cQry += CRLF + " AND D2_FILIAL = '" + xFilial('SD2') + "'"
 	cQry += CRLF + " AND D2_DOC = FT_NFISCAL"
@@ -342,15 +349,15 @@ ElseIf cNat == '2'
 	cQry += CRLF + " AND D2_LOJA = FT_LOJA"
 	cQry += CRLF + " AND D2_COD = FT_PRODUTO"
 	cQry += CRLF + " AND D2_ITEM = FT_ITEM"
-	cQry += CRLF + " LEFT JOIN " + RetSqlName('SF4') + " SF4"
+	cQry += CRLF + " LEFT JOIN " + RetSqlName('SF4') + " SF4 " + _cNoLock
 	cQry += CRLF + " ON  SF4.D_E_L_E_T_ <> '*'"
 	cQry += CRLF + " AND F4_FILIAL = '" + xFilial('SF4') + "'"
 	cQry += CRLF + " AND F4_CODIGO = D2_TES"
-	cQry += CRLF + " LEFT JOIN " + RetSqlName('SB1') + " SB1"
+	cQry += CRLF + " LEFT JOIN " + RetSqlName('SB1') + " SB1 " + _cNoLock
 	cQry += CRLF + " ON  SB1.D_E_L_E_T_ <> '*'"
 	cQry += CRLF + " AND B1_FILIAL = '" + xFilial('SB1') + "'"
 	cQry += CRLF + " AND B1_COD = FT_PRODUTO"
-	cQry += CRLF + " LEFT JOIN " + RetSqlName('ZZF') + " ZZF"
+	cQry += CRLF + " LEFT JOIN " + RetSqlName('ZZF') + " ZZF " + _cNoLock
 	cQry += CRLF + " ON  ZZF.D_E_L_E_T_ <> '*'"
 	cQry += CRLF + " AND ZZF_FILIAL = '" + xFilial('ZZF') + "'"
 	cQry += CRLF + " AND ZZF_UF = A2_EST"

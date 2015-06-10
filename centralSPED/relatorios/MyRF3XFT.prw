@@ -29,6 +29,8 @@ User Function MyRF3XFT()
 Local cTitulo := 'Comparação Livro Fiscal x Itens (SF3 x SFT)'
 Local cPerg := '#TDF3XFT'
 
+Private _cNoLock := ''
+
 CriaSX1(cPerg)
 
 If !Pergunte(cPerg, .T., cTitulo)
@@ -51,6 +53,11 @@ ElseIf MV_PAR08 == 1 .and. MV_PAR03 == 1
 //Fim Alt. (3)
 EndIf
 
+//ativa NOLOCK nas queries SQL caso seja referente a um ano anterior do corrente
+If Year(MV_PAR02) < Year(Date())
+	_cNoLock := 'WITH (NOLOCK)'
+EndIf
+
 MsAguarde({|| TDF3XFT(cTitulo) },cTitulo,'Aguarde...')
 
 Return Nil
@@ -71,7 +78,7 @@ Local aAux   := {} //Alt. (2)
 Local aDifs  := {aDifF3, aDifFT} //Alt. (2)
 
 cQry := " SELECT F3_CFO CFOP, ROUND(SUM(F3_VALCONT),2) VALCONT"
-cQry += " FROM "+RetSqlName('SF3')
+cQry += " FROM "+RetSqlName('SF3') + " " + _cNoLock
 cQry += " WHERE F3_ENTRADA >= '"+DTOS(MV_PAR01)+"'"
 cQry += "   AND F3_ENTRADA <= '"+DTOS(MV_PAR02)+"'"
 If MV_PAR03 == 1
@@ -95,7 +102,7 @@ Analisa('SSF3', aDados)
 SSF3->(dbCloseArea())
 
 cQry := " SELECT FT_CFOP CFOP, ROUND(SUM(FT_VALCONT),2) VALCONT"
-cQry += " FROM "+RetSqlName('SFT')
+cQry += " FROM "+RetSqlName('SFT') + " " + _cNoLock
 cQry += " WHERE FT_ENTRADA >= '"+DTOS(MV_PAR01)+"'"
 cQry += "   AND FT_ENTRADA <= '"+DTOS(MV_PAR02)+"'"
 If MV_PAR03 == 1
@@ -226,9 +233,15 @@ nMax := Len(aDados)
 For nI := 1 to nMax
 	If aDados[nI][2]-aDados[nI][3] <> 0
 		If nTipo == 1
-			cQry := " SELECT *,"
+			cQry := " SELECT F3_FILIAL,"
+			cQry += "        F3_ENTRADA,"
+			cQry += "        F3_NFISCAL,"
+			cQry += "        F3_SERIE,"
+			cQry += "        F3_CLIEFOR,"
+			cQry += "        F3_LOJA,"
+			cQry += "        F3_CFO,"
 			cQry += "        F3_VALCONT VALOR"
-			cQry += " FROM "+RetSqlName('SF3')
+			cQry += " FROM "+RetSqlName('SF3') + " " + _cNoLock
 			cQry += " WHERE F3_ENTRADA >= '"+DTOS(MV_PAR01)+"'"
 			cQry += "   AND F3_ENTRADA <= '"+DTOS(MV_PAR02)+"'"
 			cQry += "   AND LEN(F3_DTCANC) = 0"
@@ -250,7 +263,7 @@ For nI := 1 to nMax
 			cQry += "        FT_CLIEFOR,"
 			cQry += "        FT_LOJA,"
 			cQry += "        ROUND(SUM(FT_VALCONT),2) VALOR"
-			cQry += " FROM "+RetSqlName('SFT')
+			cQry += " FROM "+RetSqlName('SFT') + " " + _cNoLock
 			cQry += " WHERE FT_ENTRADA >= '"+DTOS(MV_PAR01)+"'"
 			cQry += "   AND FT_ENTRADA <= '"+DTOS(MV_PAR02)+"'"
 			cQry += "   AND LEN(FT_DTCANC) = 0"
@@ -278,7 +291,7 @@ For nI := 1 to nMax
 			
 			If nTipo == 1
 				cQry := " SELECT ROUND(SUM(FT_VALCONT),2) VALOR"
-				cQry += " FROM "+RetSqlName('SFT')
+				cQry += " FROM "+RetSqlName('SFT') + " " + _cNoLock
 				cQry += " WHERE LEN(FT_DTCANC) = 0"
 				cQry += "   AND D_E_L_E_T_ <> '*'"
 				cQry += "   AND FT_CFOP    = '"+MQRY1->F3_CFO+"'"
@@ -290,7 +303,7 @@ For nI := 1 to nMax
 				cQry += "   AND FT_FILIAL  = '"+MQRY1->F3_FILIAL+"'"
 			ElseIf nTipo == 2
 				cQry := " SELECT ROUND(SUM(F3_VALCONT),2) VALOR"
-				cQry += " FROM "+RetSqlName('SF3')
+				cQry += " FROM "+RetSqlName('SF3') + " " + _cNoLock
 				cQry += " WHERE LEN(F3_DTCANC) = 0"
 				cQry += "   AND D_E_L_E_T_ <> '*'"
 				cQry += "   AND F3_CFO      = '"+aDados[nI][1]+"'"
@@ -353,7 +366,7 @@ For nI := 1 to nTamI
 			//se existir diferença a maior, procura o produto com CST 04/05/06 de maior valor
 			//no geral e em seguida os itens de cupom deste produto ordenadores pelo maior valor
 			cQry := " SELECT R_E_C_N_O_ RECNUM"
-			cQry += " FROM " + RetSqlName('SFT')
+			cQry += " FROM " + RetSqlName('SFT') + " " + _cNoLock
 			cQry += " WHERE FT_FILIAL = '" + MV_PAR04 + "'"
 			cQry += "   AND FT_ENTRADA >= '" + DTOS(MV_PAR01) + "'"
 			cQry += "   AND FT_ENTRADA <= '" + DTOS(MV_PAR02) + "'"
@@ -365,7 +378,7 @@ For nI := 1 to nTamI
 			cQry += "              FT_CSTPIS,"
 			cQry += "              FT_CFOP,"
 			cQry += "              ROUND(SUM(FT_VALCONT),2) VALCONT"
-			cQry += "       FROM " + RetSqlName('SFT')
+			cQry += "       FROM " + RetSqlName('SFT') + " " + _cNoLock
 			cQry += "       WHERE FT_FILIAL = '" + MV_PAR04 + "'"
 			cQry += "         AND FT_ENTRADA >= '" + DTOS(MV_PAR01) + "'"
 			cQry += "         AND FT_ENTRADA <= '" + DTOS(MV_PAR02) + "'"

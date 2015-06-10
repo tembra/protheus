@@ -13,6 +13,8 @@ User Function MyRD1XFT()
 Local cTitulo := 'Comparação Itens Entrada x Itens Livro Fiscal (SD1 x SFT)'
 Local cPerg := '#TDD1XFT'
 
+Private _cNoLock := ''
+
 CriaSX1(cPerg)
 
 If !Pergunte(cPerg, .T., cTitulo)
@@ -25,6 +27,11 @@ If MV_PAR01 == Nil .or. MV_PAR01 == CTOD('') .or. MV_PAR02 == Nil .or. MV_PAR02 
 ElseIf MV_PAR01 > MV_PAR02
 	Alert('A data final deve ser maior que a data inicial.')
 	Return Nil
+EndIf
+
+//ativa NOLOCK nas queries SQL caso seja referente a um ano anterior do corrente
+If Year(MV_PAR02) < Year(Date())
+	_cNoLock := 'WITH (NOLOCK)'
 EndIf
 
 MsAguarde({|| TDD1XFT(cTitulo) },cTitulo,'Aguarde...')
@@ -48,7 +55,7 @@ Local aDifs  := {aDifD1, aDifFT}
 
 //D1_TOTAL + D1_ICMSRET + D1_VALIPI + D1_DESPESA + D1_VALFRE - D1_VALDESC
 cQry := " SELECT D1_CF CFOP, SUM((D1_TOTAL + D1_ICMSRET + D1_VALIPI + D1_DESPESA + D1_VALFRE - D1_VALDESC)) VALCONT"
-cQry += " FROM "+RetSqlName('SD1')
+cQry += " FROM "+RetSqlName('SD1') + " " + _cNoLock
 cQry += " WHERE D1_DTDIGIT >= '"+DTOS(MV_PAR01)+"'"
 cQry += "   AND D1_DTDIGIT <= '"+DTOS(MV_PAR02)+"'"
 cQry += "   AND D_E_L_E_T_ <> '*'"
@@ -65,7 +72,7 @@ Analisa('SSD1', aDados)
 SSD1->(dbCloseArea())
 
 cQry := " SELECT FT_CFOP CFOP, SUM(FT_VALCONT) VALCONT"
-cQry += " FROM "+RetSqlName('SFT')
+cQry += " FROM "+RetSqlName('SFT') + " " + _cNoLock
 cQry += " WHERE FT_ENTRADA >= '"+DTOS(MV_PAR01)+"'"
 cQry += "   AND FT_ENTRADA <= '"+DTOS(MV_PAR02)+"'"
 cQry += "   AND LEN(FT_DTCANC) = 0"
@@ -182,9 +189,15 @@ For nI := 1 to nMax
 	If aDados[nI][2]-aDados[nI][3] <> 0
 		If nTipo == 1
 //D1_TOTAL + D1_ICMSRET + D1_VALIPI + D1_DESPESA + D1_VALFRE - D1_VALDESC
-			cQry := " SELECT *,"
+			cQry := " SELECT D1_FILIAL,"
+			cQry += "        D1_DTDIGIT,"
+			cQry += "        D1_DOC,"
+			cQry += "        D1_SERIE,"
+			cQry += "        D1_FORNECE,"
+			cQry += "        D1_LOJA,"
+			cQry += "        D1_CF,"
 			cQry += "        (D1_TOTAL + D1_ICMSRET + D1_VALIPI + D1_DESPESA + D1_VALFRE - D1_VALDESC) VALOR"
-			cQry += " FROM "+RetSqlName('SD1')
+			cQry += " FROM "+RetSqlName('SD1') + " " + _cNoLock
 			cQry += " WHERE D1_DTDIGIT >= '"+DTOS(MV_PAR01)+"'"
 			cQry += "   AND D1_DTDIGIT <= '"+DTOS(MV_PAR02)+"'"
 			cQry += "   AND D_E_L_E_T_ <> '*'"
@@ -204,7 +217,7 @@ For nI := 1 to nMax
 			cQry += "        FT_CLIEFOR,"
 			cQry += "        FT_LOJA,"
 			cQry += "        SUM(FT_VALCONT) VALOR"
-			cQry += " FROM "+RetSqlName('SFT')
+			cQry += " FROM "+RetSqlName('SFT') + " " + _cNoLock
 			cQry += " WHERE FT_ENTRADA >= '"+DTOS(MV_PAR01)+"'"
 			cQry += "   AND FT_ENTRADA <= '"+DTOS(MV_PAR02)+"'"
 			cQry += "   AND LEN(FT_DTCANC) = 0"
@@ -232,7 +245,7 @@ For nI := 1 to nMax
 			
 			If nTipo == 1
 				cQry := " SELECT SUM(FT_VALCONT) VALOR"
-				cQry += " FROM "+RetSqlName('SFT')
+				cQry += " FROM "+RetSqlName('SFT') + " " + _cNoLock
 				cQry += " WHERE LEN(FT_DTCANC) = 0"
 				cQry += "   AND D_E_L_E_T_ <> '*'"
 				cQry += "   AND FT_CFOP    = '"+MQRY1->D1_CF+"'"
@@ -245,7 +258,7 @@ For nI := 1 to nMax
 			ElseIf nTipo == 2
 //D1_TOTAL + D1_ICMSRET + D1_VALIPI + D1_DESPESA + D1_VALFRE - D1_VALDESC
 				cQry := " SELECT SUM((D1_TOTAL + D1_ICMSRET + D1_VALIPI + D1_DESPESA + D1_VALFRE - D1_VALDESC)) VALOR"
-				cQry += " FROM "+RetSqlName('SD1')
+				cQry += " FROM "+RetSqlName('SD1') + " " + _cNoLock
 				cQry += " WHERE D_E_L_E_T_ <> '*'"
 				cQry += "   AND D1_CF      = '"+aDados[nI][1]+"'"
 				cQry += "   AND D1_DOC     = '"+MQRY1->FT_NFISCAL+"'"

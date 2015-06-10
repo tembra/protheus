@@ -15,11 +15,17 @@ User Function MyQDvCom(dDtIni,dDtFim,cFilDe,cFilAte,cCFOP,cCFPad,cCST)
 ///////////////////////////////////////////////////////////////////////////////
 
 Local cQry
+Local cNoLock := ''
 Default cFilDe := ''
 Default cFilAte := 'zz'
 Default cCFOP := ''
 Default cCFPad := GetMV('MY_CFDEVPC')
 Default cCST := ''
+ 
+//ativa NOLOCK nas queries SQL caso seja referente a um ano anterior do corrente
+If Year(dDtFim) < Year(Date())
+	cNoLock := 'WITH (NOLOCK)'
+EndIf
 
 cQry := CRLF + " SELECT"
 cQry += CRLF + "        SFTS.FT_FILIAL  AS SFTS_FILIAL"
@@ -67,7 +73,7 @@ cQry += CRLF + "       ,SFTE.FT_VALCOF  AS SFTE_VCOF"
 cQry += CRLF + "       ,("
 cQry += CRLF + "           SELECT TOP 1"
 cQry += CRLF + "              ZPI_NCM"
-cQry += CRLF + "           FROM " + RetSqlName('ZPI') + " ZPI"
+cQry += CRLF + "           FROM " + RetSqlName('ZPI') + " ZPI " + cNoLock
 cQry += CRLF + "           WHERE ZPI.D_E_L_E_T_ <> '*'"
 cQry += CRLF + "             AND ZPI_FILIAL = " + Iif(AllTrim(xFilial('ZPI')) == '',"''","SFTS.FT_FILIAL")
 cQry += CRLF + "             AND ZPI_NCM    = SFTS.FT_POSIPI"
@@ -79,8 +85,8 @@ cQry += CRLF + "                 AND ZPI_DTFIMN = ''"
 cQry += CRLF + "               )"
 cQry += CRLF + "             )"
 cQry += CRLF + "        ) AS ZPI_NCM"
-cQry += CRLF + " FROM " + RetSqlName('SFT') + " SFTS"
-cQry += CRLF + " LEFT JOIN " + RetSqlName('SFT') + " SFTE"
+cQry += CRLF + " FROM " + RetSqlName('SFT') + " SFTS " + cNoLock
+cQry += CRLF + " LEFT JOIN " + RetSqlName('SFT') + " SFTE " + cNoLock
 cQry += CRLF + " ON  SFTE.D_E_L_E_T_ <> '*'"
 cQry += CRLF + " AND SFTE.FT_FILIAL  = SFTS.FT_FILIAL"
 cQry += CRLF + " AND SFTE.FT_NFISCAL = SFTS.FT_NFORI"

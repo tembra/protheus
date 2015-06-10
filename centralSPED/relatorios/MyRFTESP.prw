@@ -17,6 +17,8 @@ Local cPerg := '#TDFTESP'
 Local aArea := GetArea()
 Local aAreaSM0 := SM0->(GetArea())
 
+Private _cNoLock := ''
+
 CriaSX1(cPerg)
 
 If !Pergunte(cPerg, .T., cTitulo)
@@ -32,6 +34,11 @@ ElseIf MV_PAR01 > MV_PAR02
 ElseIf MV_PAR09 == 2 .and. MV_PAR08 == 5
 	Alert('Para emitir somente o relatório analítico, não deve ser escolhido o tipo de analítico como "Todos".')
 	Return Nil
+EndIf
+
+//ativa NOLOCK nas queries SQL caso seja referente a um ano anterior do corrente
+If Year(MV_PAR02) < Year(Date())
+	_cNoLock := 'WITH (NOLOCK)'
 EndIf
 
 Processa({|| TDFTESP(cTitulo) },cTitulo,'Realizando consulta...')
@@ -91,7 +98,7 @@ If MV_PAR09 == 1
 	cQry += CRLF + "        SUM(FT_BASECOF) BASECOF,"
 	cQry += CRLF + "        SUM(FT_VALPIS) VALPIS,"
 	cQry += CRLF + "        SUM(FT_VALCOF) VALCOF"
-	cQry += CRLF + " FROM "+RetSqlName('SFT')
+	cQry += CRLF + " FROM "+RetSqlName('SFT') + " " + _cNoLock
 	cQry += CRLF + " WHERE FT_ENTRADA >= '"+DTOS(MV_PAR01)+"'"
 	cQry += CRLF + "   AND FT_ENTRADA <= '"+DTOS(MV_PAR02)+"'"
 	cQry += CRLF + "   AND LEN(FT_DTCANC) = 0"
@@ -142,16 +149,16 @@ If MV_PAR09 == 1
 		cQry += CRLF + "        A1_NOME NOMCLIEFOR"
 	EndIf
 	
-	cQry += CRLF + " FROM "+RetSqlName('SFT')+" as SFT "
+	cQry += CRLF + " FROM "+RetSqlName('SFT')+" as SFT " + _cNoLock
 	
 	If MV_PAR05 == 1
-		cQry += CRLF + " LEFT JOIN "+RetSqlName('SA2')+" as SAX"
+		cQry += CRLF + " LEFT JOIN "+RetSqlName('SA2')+" as SAX " + _cNoLock
 		cQry += CRLF + " ON FT_CLIEFOR = A2_COD"
 		cQry += CRLF + "   AND FT_LOJA = A2_LOJA"
 		cQry += CRLF + "   AND SAX.D_E_L_E_T_ <> '*'"
 		cQry += CRLF + "   AND A2_FILIAL = ''"
 	Else
-		cQry += CRLF + " LEFT JOIN "+RetSqlName('SA1')+" as SAX"
+		cQry += CRLF + " LEFT JOIN "+RetSqlName('SA1')+" as SAX " + _cNoLock
 		cQry += CRLF + " ON FT_CLIEFOR = A1_COD"
 		cQry += CRLF + "   AND FT_LOJA = A1_LOJA"
 		cQry += CRLF + "   AND SAX.D_E_L_E_T_ <> '*'"
@@ -371,8 +378,8 @@ bkp:
 		cQry += CRLF + "        SUM(FT_VALPIS) VALPIS,"
 		cQry += CRLF + "        SUM(FT_VALCOF) VALCOF"
 	EndIf
-	cQry += CRLF + " FROM "+RetSqlName('SFT')+" SFT,"
-	cQry += CRLF + "      "+RetSqlName('SB1')+" SB1"
+	cQry += CRLF + " FROM "+RetSqlName('SFT')+" SFT " + _cNoLock
+	cQry += CRLF + "     ,"+RetSqlName('SB1')+" SB1 " + _cNoLock
 	cQry += CRLF + " WHERE SFT.D_E_L_E_T_ <> '*'"
 	cQry += CRLF + "   AND SB1.D_E_L_E_T_ <> '*'"
 	cQry += CRLF + "   AND FT_PRODUTO = B1_COD"
@@ -487,11 +494,11 @@ bkp:
 		cQry += CRLF + "        SUM(FT_VALPIS) VALPIS,"
 		cQry += CRLF + "        SUM(FT_VALCOF) VALCOF"
 	EndIf
-	cQry += CRLF + " FROM "+RetSqlName('SFT')+" SFT,"
-	cQry += CRLF + "      "+RetSqlName('SB1')+" SB1"
+	cQry += CRLF + " FROM "+RetSqlName('SFT')+" SFT " + _cNoLock
+	cQry += CRLF + "     ,"+RetSqlName('SB1')+" SB1 " + _cNoLock
 	
 	If MV_PAR09 == 1
-		cQry += CRLF + " LEFT JOIN "+RetSqlName('SZ3')+" SZ3"
+		cQry += CRLF + " LEFT JOIN "+RetSqlName('SZ3')+" SZ3 " + _cNoLock
 		cQry += CRLF + " ON Z3_COD = B1_GRPCTB"
 		cQry += CRLF + " AND SZ3.D_E_L_E_T_ <> '*'"
 		cQry += CRLF + " AND Z3_FILIAL = '"+Iif(AllTrim(xFilial('SZ3'))=='',xFilial('SZ3'),NOTAS->FILIAL)+"'"
@@ -700,9 +707,9 @@ ElseIf nTipo == 2
 	cQry += CRLF + "        SUM(FT_BASECOF) BASECOF,"
 	cQry += CRLF + "        SUM(FT_VALPIS) VALPIS,"
 	cQry += CRLF + "        SUM(FT_VALCOF) VALCOF"
-	cQry += CRLF + " FROM "+RetSqlName('SFT')+" SFT,"
-	cQry += CRLF + "      "+RetSqlName('SB1')+" SB1"
-	cQry += CRLF + " LEFT JOIN "+RetSqlName('SYD')+" SYD"
+	cQry += CRLF + " FROM "+RetSqlName('SFT')+" SFT " + _cNoLock
+	cQry += CRLF + "     ,"+RetSqlName('SB1')+" SB1 " + _cNoLock
+	cQry += CRLF + " LEFT JOIN "+RetSqlName('SYD')+" SYD " + _cNoLock
 	cQry += CRLF + " ON  B1_POSIPI = YD_TEC"
 	cQry += CRLF + " AND B1_EX_NCM = YD_EX_NCM"
 	cQry += CRLF + " AND SYD.D_E_L_E_T_ <> '*'"
@@ -812,8 +819,8 @@ ElseIf nTipo == 3
 	cQry += CRLF + "        SUM(FT_BASECOF) BASECOF,"
 	cQry += CRLF + "        SUM(FT_VALPIS) VALPIS,"
 	cQry += CRLF + "        SUM(FT_VALCOF) VALCOF"
-	cQry += CRLF + " FROM "+RetSqlName('SFT')+" SFT"
-	cQry += CRLF + " LEFT JOIN "+RetSqlName('CCZ')+" CCZ"
+	cQry += CRLF + " FROM "+RetSqlName('SFT')+" SFT " + _cNoLock
+	cQry += CRLF + " LEFT JOIN "+RetSqlName('CCZ')+" CCZ " + _cNoLock
 	cQry += CRLF + " ON  FT_TNATREC = CCZ_TABELA"
 	cQry += CRLF + " AND FT_CNATREC = CCZ_COD"
 	cQry += CRLF + " AND CCZ.D_E_L_E_T_ <> '*'"
@@ -923,7 +930,7 @@ ElseIf nTipo == 4
 	cQry += CRLF + "        SUM(FT_BASECOF) BASECOF,"
 	cQry += CRLF + "        SUM(FT_VALPIS) VALPIS,"
 	cQry += CRLF + "        SUM(FT_VALCOF) VALCOF"
-	cQry += CRLF + " FROM "+RetSqlName('SFT')
+	cQry += CRLF + " FROM "+RetSqlName('SFT') + " " + _cNoLock
 	cQry += CRLF + " WHERE D_E_L_E_T_ <> '*'"
 	If MV_PAR09 == 1
 		cQry += CRLF + "   AND FT_FILIAL = '"+NOTAS->FILIAL+"'"

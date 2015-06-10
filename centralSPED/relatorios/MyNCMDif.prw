@@ -11,6 +11,8 @@ User Function MyNCMDif()
 Local cTitulo := 'Relação de Produtos que possuem NCM diferente na SFT e na SB1'
 Local cPerg := '#MyNCMDif'
 
+Private _cNoLock := ''
+
 CriaSX1(cPerg)
 
 If !Pergunte(cPerg, .T., cTitulo)
@@ -23,6 +25,11 @@ If MV_PAR01 == Nil .or. MV_PAR01 == CTOD('') .or. MV_PAR02 == Nil .or. MV_PAR02 
 ElseIf MV_PAR01 > MV_PAR02
 	Alert('A data final deve ser maior que a data inicial.')
 	Return Nil
+EndIf
+
+//ativa NOLOCK nas queries SQL caso seja referente a um ano anterior do corrente
+If Year(MV_PAR02) < Year(Date())
+	_cNoLock := 'WITH (NOLOCK)'
 EndIf
 
 Processa({|| Executa(cTitulo) },cTitulo,'Realizando consulta...')
@@ -46,8 +53,8 @@ cQry += CRLF + "        B1_COD"
 cQry += CRLF + "       ,B1_DESC"
 cQry += CRLF + "       ,B1_POSIPI"
 cQry += CRLF + "       ,FT_POSIPI"
-cQry += CRLF + " FROM " + RetSqlName('SFT') + " SFT"
-cQry += CRLF + "     ," + RetSqlName('SB1') + " SB1"
+cQry += CRLF + " FROM " + RetSqlName('SFT') + " SFT " + _cNoLock
+cQry += CRLF + "     ," + RetSqlName('SB1') + " SB1 " + _cNoLock
 cQry += CRLF + " WHERE SFT.D_E_L_E_T_ <> '*'"
 cQry += CRLF + "   AND SB1.D_E_L_E_T_ <> '*'"
 cQry += CRLF + "   AND FT_FILIAL = '" + xFilial('SFT') + "'"

@@ -16,6 +16,8 @@ Local cPerg := '#MYRICMSR'
 Local aArea := GetArea()
 Local aAreaSM0 := SM0->(GetArea())
 
+Private _cNoLock := ''
+
 CriaSX1(cPerg)
 
 If !Pergunte(cPerg, .T., cTitulo)
@@ -28,6 +30,11 @@ If MV_PAR01 == Nil .or. MV_PAR01 == CTOD('') .or. MV_PAR02 == Nil .or. MV_PAR02 
 ElseIf MV_PAR01 > MV_PAR02
 	Alert('A data final deve ser maior que a data inicial.')
 	Return Nil
+EndIf
+
+//ativa NOLOCK nas queries SQL caso seja referente a um ano anterior do corrente
+If Year(MV_PAR02) < Year(Date())
+	_cNoLock := 'WITH (NOLOCK)'
 EndIf
 
 Processa({|| Executa(cTitulo) },cTitulo,'Realizando consulta...')
@@ -74,7 +81,7 @@ cQry += CRLF + "   ,FT_VALCOF"
 cQry += CRLF + "   ,FT_ICMSRET"
 cQry += CRLF + "   ,FT_CFOP"
 cQry += CRLF + "   ,FT_CSTPIS"
-cQry += CRLF + " FROM " + RetSqlName('SFT')
+cQry += CRLF + " FROM " + RetSqlName('SFT') + " " + _cNoLock
 cQry += CRLF + " WHERE D_E_L_E_T_ <> '*'"
 cQry += CRLF + "   AND FT_FILIAL BETWEEN '" + MV_PAR03 + "' AND '" + MV_PAR04 + "'"
 cQry += CRLF + "   AND FT_ENTRADA BETWEEN '" + DTOS(MV_PAR01) + "' AND '" + DTOS(MV_PAR02) + "'"

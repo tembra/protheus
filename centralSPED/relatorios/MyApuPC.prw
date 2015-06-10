@@ -252,11 +252,17 @@ EndIf
 Private _aApura
 Private _cMesAtu := StrZero(MV_PAR02,4) + StrZero(MV_PAR01,2)
 Private _cMesAnt := ''
+Private _cNoLock := ''
 
 If MV_PAR01 - 1 == 0
 	_cMesAnt := StrZero(MV_PAR02 - 1,4) + '12'
 Else
 	_cMesAnt := StrZero(MV_PAR02,4) + StrZero(MV_PAR01 - 1,2)
+EndIf
+
+//ativa NOLOCK nas queries SQL caso seja referente a um ano anterior do corrente
+If MV_PAR02 < Year(Date())
+	_cNoLock := 'WITH (NOLOCK)'
 EndIf
 
 //inicializando array de apuração final
@@ -326,8 +332,8 @@ cQry += CRLF + "       ,ROUND(SUM(FT_DESCONT),2) DESCONT"
 cQry += CRLF + "       ,ROUND(SUM(FT_FRETE),2) FRETE"
 cQry += CRLF + "       ,ROUND(SUM(FT_DESPESA-(FT_SEGURO+FT_FRETE)),2) DESPESA"
 cQry += CRLF + "       ,ROUND(SUM(FT_SEGURO),2) SEGURO"
-cQry += CRLF + " FROM " + RetSqlName('SFT') + " SFT"
-cQry += CRLF + " LEFT JOIN SF3010 SF3"
+cQry += CRLF + " FROM " + RetSqlName('SFT') + " SFT " + _cNoLock
+cQry += CRLF + " LEFT JOIN " + RetSqlName('SF3') + " SF3 " + _cNoLock
 cQry += CRLF + " ON  SF3.D_E_L_E_T_ <> '*'"
 cQry += CRLF + " AND F3_FILIAL = FT_FILIAL"
 cQry += CRLF + " AND F3_NFISCAL = FT_NFISCAL"
@@ -1133,7 +1139,7 @@ Local nTotPIS := 0
 Local nTotCOF := 0
 
 cQry := CRLF + " SELECT R_E_C_N_O_ AS RECNUM"
-cQry += CRLF + " FROM " + RetSqlName('SFT')
+cQry += CRLF + " FROM " + RetSqlName('SFT') + " " + _cNoLock
 cQry += CRLF + " WHERE LEFT(FT_ENTRADA,6) = '"+_cMesAtu+"'"
 cQry += CRLF + "   AND LEN(FT_DTCANC) = 0 "
 cQry += CRLF + "   AND FT_OBSERV NOT LIKE '%INUTIL%'"
@@ -1365,8 +1371,8 @@ If !lGeral
 		cQry += CRLF + "       ,ED_PCAPCOF"
 		cQry += CRLF + "       ,ED_DESCRIC"
 		cQry += CRLF + "       ,ROUND(SUM(E1_VALOR),2) AS VALOR" 
-		cQry += CRLF + " FROM " + RetSqlName('SE1') + " SE1,"
-		cQry += CRLF + "      " + RetSqlName('SED') + " SED"
+		cQry += CRLF + " FROM " + RetSqlName('SE1') + " SE1 " + _cNoLock
+		cQry += CRLF + "     ," + RetSqlName('SED') + " SED " + _cNoLock
 		cQry += CRLF + " WHERE SED.D_E_L_E_T_ <> '*'"
 		cQry += CRLF + "   AND SE1.D_E_L_E_T_ <> '*'"
 		cQry += CRLF + "   AND E1_FILIAL = '"+cFAnt+"'"
@@ -1395,8 +1401,8 @@ If !lGeral
 		cQry += CRLF + "       ,ED_PCAPCOF"
 		cQry += CRLF + "       ,ED_DESCRIC"
 		cQry += CRLF + "       ,ROUND(SUM(E2_VALOR),2) AS VALOR" 
-		cQry += CRLF + " FROM " + RetSqlName('SE2') + " SE2,"
-		cQry += CRLF + "      " + RetSqlName('SED') + " SED"
+		cQry += CRLF + " FROM " + RetSqlName('SE2') + " SE2 " + _cNoLock
+		cQry += CRLF + "     ," + RetSqlName('SED') + " SED " + _cNoLock
 		cQry += CRLF + " WHERE SED.D_E_L_E_T_ <> '*'"
 		cQry += CRLF + "   AND SE2.D_E_L_E_T_ <> '*'"
 		cQry += CRLF + "   AND E2_FILIAL = '"+cFAnt+"'"
@@ -2399,6 +2405,8 @@ Static Function AjuConCan(aExcel, cFAnt, lGeral)
 Local cQry
 Local nSomaPis := 0
 Local nSomaCof := 0
+Local nSomaBPis := 0
+Local nSomaBCof := 0
 Local nI, nJ, nMax
 Local aAux
 
@@ -2418,8 +2426,8 @@ If !lGeral
 	cQry += CRLF + "       ,ROUND(SUM(FT_BASECOF),2) BASECOF"
 	cQry += CRLF + "       ,ROUND(SUM(FT_VALPIS),2) VALPIS"
 	cQry += CRLF + "       ,ROUND(SUM(FT_VALCOF),2) VALCOF"
-	cQry += CRLF + " FROM " + RetSqlName('SFT') + " SFT"
-	cQry += CRLF + " LEFT JOIN SF3010 SF3"
+	cQry += CRLF + " FROM " + RetSqlName('SFT') + " SFT " + _cNoLock
+	cQry += CRLF + " LEFT JOIN " + RetSqlName('SF3') + " SF3 " + _cNoLock
 	cQry += CRLF + " ON  SF3.D_E_L_E_T_ <> '*'"
 	cQry += CRLF + " AND F3_FILIAL = '" + cFAnt + "'"
 	cQry += CRLF + " AND F3_NFISCAL = FT_NFISCAL"
@@ -2464,6 +2472,8 @@ If !lGeral
 		aAdd(_aAjuConG, {AJUCON_TIPO_CANCELAMENTO, cFAnt, AJUCON->FT_ESPECIE, DTOC(STOD(AJUCON->FT_ENTRADA)), AJUCON->FT_SERIE, AJUCON->FT_NFISCAL, AJUCON->VALCONT, AJUCON->VALITEM, AJUCON->BASEPIS, AJUCON->BASECOF, AJUCON->VALPIS, AJUCON->VALCOF})
 		nSomaPis += AJUCON->VALPIS
 		nSomaCof += AJUCON->VALCOF
+		nSomaBPis += AJUCON->BASEPIS
+		nSomaBCof += AJUCON->BASECOF
 		AJUCON->(dbSkip())
 	EndDo
 	AJUCON->(dbCloseArea())
@@ -2478,14 +2488,16 @@ Else
 			aAdd(aExcel, aClone(aAux))
 			nSomaPis += _aAjuConG[nI][AJUCON_VALPIS]
 			nSomaCof += _aAjuConG[nI][AJUCON_VALCOF]
+			nSomaBPis += _aAjuConG[nI][AJUCON_BASEPIS]
+			nSomaBCof += _aAjuConG[nI][AJUCON_BASECOF]
 		EndIf
 	Next nI
 EndIf
 
 If !lGeral
-	aAdd(aExcel, {'', '', '', '', '', '', 'Valor total do ajuste', '', nSomaPis, nSomaCof})
+	aAdd(aExcel, {'', '', '', '', 'Valor total do ajuste', '', nSomaBPis, nSomaBCof, nSomaPis, nSomaCof})
 Else
-	aAdd(aExcel, {'','', '', '', '', '', '', 'Valor total do ajuste', '', nSomaPis, nSomaCof})
+	aAdd(aExcel, {'','', '', '', '', 'Valor total do ajuste', '', nSomaBPis, nSomaBCof, nSomaPis, nSomaCof})
 EndIf
 aAdd(aExcel, {''})
 
@@ -2505,6 +2517,8 @@ Static Function AjuConAnu(aExcel, cFAnt, lGeral)
 Local cQry
 Local nSomaPis := 0
 Local nSomaCof := 0
+Local nSomaBPis := 0
+Local nSomaBCof := 0
 Local nI, nJ, nMax
 Local aAux
 Local nBasePis, nBaseCof, nValPis, nValCof
@@ -2525,8 +2539,8 @@ If !lGeral
 	cQry += CRLF + "       ,ROUND(SUM(FT_BASECOF),2) BASECOF"
 	cQry += CRLF + "       ,ROUND(SUM(FT_VALPIS),2) VALPIS"
 	cQry += CRLF + "       ,ROUND(SUM(FT_VALCOF),2) VALCOF"
-	cQry += CRLF + " FROM " + RetSqlName('SFT') + " SFT"
-	cQry += CRLF + " LEFT JOIN SF3010 SF3"
+	cQry += CRLF + " FROM " + RetSqlName('SFT') + " SFT " + _cNoLock
+	cQry += CRLF + " LEFT JOIN " + RetSqlName('SF3') + " SF3 " + _cNoLock
 	cQry += CRLF + " ON  SF3.D_E_L_E_T_ <> '*'"
 	cQry += CRLF + " AND F3_FILIAL = '" + cFAnt + "'"
 	cQry += CRLF + " AND F3_NFISCAL = FT_NFISCAL"
@@ -2587,6 +2601,8 @@ If !lGeral
 		aAdd(_aAjuConG, {AJUCON_TIPO_ANULACAO, cFAnt, AJUCON->FT_ESPECIE, DTOC(STOD(AJUCON->FT_ENTRADA)), AJUCON->FT_SERIE, AJUCON->FT_NFISCAL, AJUCON->VALCONT, AJUCON->VALITEM, nBasePis, nBaseCof, nValPis, nValCof})
 		nSomaPis += nValPis
 		nSomaCof += nValCof
+		nSomaBPis += nBasePis
+		nSomaBCof += nBaseCof
 		AJUCON->(dbSkip())
 	EndDo
 	AJUCON->(dbCloseArea())
@@ -2601,14 +2617,16 @@ Else
 			aAdd(aExcel, aClone(aAux))
 			nSomaPis += _aAjuConG[nI][AJUCON_VALPIS]
 			nSomaCof += _aAjuConG[nI][AJUCON_VALCOF]
+			nSomaBPis += _aAjuConG[nI][AJUCON_BASEPIS]
+			nSomaBCof += _aAjuConG[nI][AJUCON_BASECOF]
 		EndIf
 	Next nI
 EndIf
 
 If !lGeral
-	aAdd(aExcel, {'', '', '', '', '', '', 'Valor total do ajuste', '', nSomaPis, nSomaCof})
+	aAdd(aExcel, {'', '', '', '', 'Valor total do ajuste', '', nSomaBPis, nSomaBCof, nSomaPis, nSomaCof})
 Else
-	aAdd(aExcel, {'','', '', '', '', '', '', 'Valor total do ajuste', '', nSomaPis, nSomaCof})
+	aAdd(aExcel, {'','', '', '', '', 'Valor total do ajuste', '', nSomaBPis, nSomaBCof, nSomaPis, nSomaCof})
 EndIf
 aAdd(aExcel, {''})
 
@@ -2628,6 +2646,8 @@ Static Function AjuCreDev(aExcel, cFAnt, lGeral)
 Local cQry
 Local nSomaPis := 0
 Local nSomaCof := 0
+Local nSomaBPis := 0
+Local nSomaBCof := 0
 Local nI, nJ, nMax
 Local aAux
 Local cAux, cPeriodo
@@ -2721,6 +2741,8 @@ If !lGeral
 			
 			nSomaPis += nValPis
 			nSomaCof += nValCof
+			nSomaBPis += nBasePis
+			nSomaBCof += nBaseCof
 		EndIf
 		AJUCRE->(dbSkip())
 	EndDo
@@ -2736,14 +2758,16 @@ Else
 			aAdd(aExcel, aClone(aAux))
 			nSomaPis += _aAjuCreG[nI][AJUCRE_EVALPIS]
 			nSomaCof += _aAjuCreG[nI][AJUCRE_EVALCOF]
+			nSomaBPis += _aAjuCreG[nI][AJUCRE_EBASEPIS]
+			nSomaBCof += _aAjuCreG[nI][AJUCRE_EBASECOF]
 		EndIf
 	Next nI
 EndIf
 
 If !lGeral
-	aAdd(aExcel, {'','','', '', '', '', '', '', '', '', 'Valor total do ajuste', '', nSomaPis, nSomaCof})
+	aAdd(aExcel, {'','','', '', '', '', '', '', 'Valor total do ajuste', '', nSomaBPis, nSomaBCof, nSomaPis, nSomaCof})
 Else
-	aAdd(aExcel, {'','','', '', '', '', '', '', '', '', '', 'Valor total do ajuste', '', nSomaPis, nSomaCof})
+	aAdd(aExcel, {'','','', '', '', '', '', '', '', 'Valor total do ajuste', '', nSomaBPis, nSomaBCof, nSomaPis, nSomaCof})
 EndIf
 aAdd(aExcel, {''})
 
