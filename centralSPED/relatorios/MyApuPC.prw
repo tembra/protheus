@@ -261,7 +261,7 @@ Else
 EndIf
 
 //ativa NOLOCK nas queries SQL caso seja referente a um ano anterior do corrente
-If MV_PAR02 < Year(Date())
+If MV_PAR02 < Year(Date()) .and. TCGetDB() == 'MSSQL'
 	_cNoLock := 'WITH (NOLOCK)'
 EndIf
 
@@ -375,7 +375,9 @@ EndIf
 cQry += CRLF + " GROUP BY FT_FILIAL, FT_CFOP, FT_CSTPIS, FT_TNATREC, FT_CNATREC, FT_CODBCC "
 cQry += CRLF + " ORDER BY FT_FILIAL, FT_CFOP, FT_CSTPIS, FT_TNATREC, FT_CNATREC, FT_CODBCC "
 //Aviso('cQry',cQry+CRLF+CRLF+CRLF,{'ok'})
-cQry := ChangeQuery(cQry)
+If _cNoLock == ''
+	cQry := ChangeQuery(cQry)
+EndIf
 dbUseArea(.T.,'TOPCONN',TCGenQry(,,cQry),'SSFT',.T.)
 
 nCnt := 0
@@ -1154,7 +1156,9 @@ If AllTrim(MV_PAR05) <> ''
 EndIf
 cQry += CRLF + " ORDER BY FT_VALPIS DESC, FT_VALCOF DESC"
 
-cQry := ChangeQuery(cQry)
+If _cNoLock == ''
+	cQry := ChangeQuery(cQry)
+EndIf
 dbUseArea(.T.,'TOPCONN',TCGenQry(,,cQry),'MDIF',.T.)
 While !MDIF->(Eof())
 	SFT->(dbGoTo(MDIF->RECNUM))
@@ -1423,7 +1427,9 @@ If !lGeral
 		cQry += CRLF + "         ,ED_DESCRIC"
 		cQry += CRLF + " ORDER BY 1,2,3"
 
-		cQry := ChangeQuery(cQry)
+		If _cNoLock == ''
+			cQry := ChangeQuery(cQry)
+		EndIf
 		dbUseArea(.T.,'TOPCONN',TCGenQry(,,cQry),'MTIT',.T.)
 		While !MTIT->(Eof())
 			nBasePis := Round(MTIT->VALOR*(100-MTIT->ED_REDPIS)/100,2)
@@ -2455,7 +2461,9 @@ If !lGeral
 	cQry += CRLF + "   AND FT_CSTPIS = '01'"
 	cQry += CRLF + " GROUP BY FT_ESPECIE, FT_ENTRADA, FT_SERIE, FT_NFISCAL, FT_CLIEFOR, FT_LOJA"
 	cQry += CRLF + " ORDER BY FT_ESPECIE, FT_ENTRADA, FT_SERIE, FT_NFISCAL, FT_CLIEFOR, FT_LOJA"
-	cQry := ChangeQuery(cQry)
+	If _cNoLock == ''
+		cQry := ChangeQuery(cQry)
+	EndIf
 	dbUseArea(.T.,'TOPCONN',TCGenQry(,,cQry),'AJUCON',.T.)
 EndIf
 
@@ -2576,7 +2584,9 @@ If !lGeral
 	cQry += CRLF + "   AND FT_CFOP IN ('1206','2206')"
 	cQry += CRLF + " GROUP BY FT_ESPECIE, FT_ENTRADA, FT_SERIE, FT_NFISCAL, FT_CLIEFOR, FT_LOJA"
 	cQry += CRLF + " ORDER BY FT_ESPECIE, FT_ENTRADA, FT_SERIE, FT_NFISCAL, FT_CLIEFOR, FT_LOJA"
-	cQry := ChangeQuery(cQry)
+	If _cNoLock == ''
+		cQry := ChangeQuery(cQry)
+	EndIf
 	dbUseArea(.T.,'TOPCONN',TCGenQry(,,cQry),'AJUCON',.T.)
 EndIf
 
@@ -2657,7 +2667,6 @@ Default lGeral := .F.
 
 If !lGeral
 	cQry := U_MyQDvCom(U_MyDia(1,MV_PAR01,MV_PAR02),U_MyDia(2,MV_PAR01,MV_PAR02),cFAnt,cFAnt,,,'50')
-	cQry := ChangeQuery(cQry)
 	dbUseArea(.T.,'TOPCONN',TCGenQry(,,cQry),'AJUCRE',.T.)
 EndIf
 
@@ -2790,7 +2799,6 @@ Local aAux := {}
 Local nPerPis, nPerCof, nBasePis, nBaseCof, nValPis, nValCof
 
 cQry := U_MyQDvCom(U_MyDia(1,MV_PAR01,MV_PAR02),U_MyDia(2,MV_PAR01,MV_PAR02),cFAnt,cFAnt,,,'50')
-cQry := ChangeQuery(cQry)
 dbUseArea(.T.,'TOPCONN',TCGenQry(,,cQry),'DVCOM',.T.)
 
 While !DVCOM->(Eof())

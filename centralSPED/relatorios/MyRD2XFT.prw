@@ -30,7 +30,7 @@ ElseIf MV_PAR01 > MV_PAR02
 EndIf
 
 //ativa NOLOCK nas queries SQL caso seja referente a um ano anterior do corrente
-If Year(MV_PAR02) < Year(Date())
+If Year(MV_PAR02) < Year(Date()) .and. TCGetDB() == 'MSSQL'
 	_cNoLock := 'WITH (NOLOCK)'
 EndIf
 
@@ -65,7 +65,9 @@ If AllTrim(MV_PAR05) <> ''
 EndIf
 cQry += " GROUP BY D2_CF"
 cQry += " ORDER BY D2_CF"
-
+If _cNoLock == ''
+	cQry := ChangeQuery(cQry)
+EndIf
 dbUseArea(.T.,'TOPCONN',TCGenQry(,,cQry),'SSD2',.T.)
 Analisa('SSD2', aDados)
 SSD2->(dbCloseArea())
@@ -84,7 +86,9 @@ If AllTrim(MV_PAR05) <> ''
 EndIf
 cQry += " GROUP BY FT_CFOP"
 cQry += " ORDER BY FT_CFOP"
-
+If _cNoLock == ''
+	cQry := ChangeQuery(cQry)
+EndIf
 dbUseArea(.T.,'TOPCONN',TCGenQry(,,cQry),'SSFT',.T.)
 Analisa('SSFT', aDados)
 SSFT->(dbCloseArea())
@@ -236,7 +240,9 @@ For nI := 1 to nMax
 			cQry += "          FT_LOJA,"
 			cQry += "          FT_ENTRADA"
 		EndIf
-		
+		If _cNoLock == ''
+			cQry := ChangeQuery(cQry)
+		EndIf
 		dbUseArea(.T.,'TOPCONN',TCGenQry(,,cQry),'MQRY1',.T.)
 		While !MQRY1->(Eof())
 			nVal1 := MQRY1->VALOR
@@ -264,7 +270,9 @@ For nI := 1 to nMax
 				cQry += "   AND D2_EMISSAO = '"+MQRY1->FT_ENTRADA+"'"
 				cQry += "   AND D2_FILIAL  = '"+MQRY1->FT_FILIAL+"'"
 			EndIf
-			
+			If _cNoLock == ''
+				cQry := ChangeQuery(cQry)
+			EndIf
 			dbUseArea(.T.,'TOPCONN',TCGenQry(,,cQry),'MQRY2',.T.)
 			
 			If !MQRY2->(Eof())

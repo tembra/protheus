@@ -23,7 +23,7 @@ Default cCFPad := GetMV('MY_CFDEVPC')
 Default cCST := ''
  
 //ativa NOLOCK nas queries SQL caso seja referente a um ano anterior do corrente
-If Year(dDtFim) < Year(Date())
+If Year(dDtFim) < Year(Date()) .and. TCGetDB() == 'MSSQL'
 	cNoLock := 'WITH (NOLOCK)'
 EndIf
 
@@ -123,5 +123,9 @@ cQry += CRLF + "         ,SFTE.FT_ENTRADA"
 cQry += CRLF + "         ,SFTE.FT_SERIE"
 cQry += CRLF + "         ,SFTE.FT_NFISCAL"
 cQry += CRLF + "         ,SFTE.FT_PRODUTO"
+
+If cNoLock == ''
+	cQry := ChangeQuery(cQry)
+EndIf
 
 Return cQry

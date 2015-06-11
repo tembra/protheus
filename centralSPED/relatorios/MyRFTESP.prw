@@ -37,7 +37,7 @@ ElseIf MV_PAR09 == 2 .and. MV_PAR08 == 5
 EndIf
 
 //ativa NOLOCK nas queries SQL caso seja referente a um ano anterior do corrente
-If Year(MV_PAR02) < Year(Date())
+If Year(MV_PAR02) < Year(Date()) .and. TCGetDB() == 'MSSQL'
 	_cNoLock := 'WITH (NOLOCK)'
 EndIf
 
@@ -212,7 +212,9 @@ If MV_PAR09 == 1
 	/*
 	------------------------------------------
 	*/
-	
+	If _cNoLock == ''
+		cQry := ChangeQuery(cQry)
+	EndIf
 	dbUseArea(.T.,'TOPCONN',TCGenQry(,,cQry),'NOTAS',.T.)
 	nCnt := 0
 	NOTAS->(dbEval({||nCnt++}))
@@ -426,7 +428,9 @@ bkp:
 		cQry += CRLF + " ORDER BY FT_FILIAL,"
 		cQry += CRLF + "          FT_PRODUTO"
 	EndIf
-	
+	If _cNoLock == ''
+		cQry := ChangeQuery(cQry)
+	EndIf
 	dbUseArea(.T.,'TOPCONN',TCGenQry(,,cQry),'ANA',.T.)
 	If MV_PAR09 == 1
 		aAdd(aExcel, {'', 'Por Produto'})
@@ -564,7 +568,9 @@ bkp:
 		cQry += CRLF + " ORDER BY FT_FILIAL,"
 		cQry += CRLF + "          FT_PRODUTO"
 	EndIf
-	
+	If _cNoLock == ''
+		cQry := ChangeQuery(cQry)
+	EndIf
 	dbUseArea(.T.,'TOPCONN',TCGenQry(,,cQry),'ANA',.T.)
 	If MV_PAR09 == 1
 		aAdd(aExcel, {'', 'Por Produto'})
@@ -769,7 +775,9 @@ ElseIf nTipo == 2
 		cQry += CRLF + "          FT_POSIPI,"
 		cQry += CRLF + "          YD_DESC_P"
 	EndIf
-	
+	If _cNoLock == ''
+		cQry := ChangeQuery(cQry)
+	EndIf
 	dbUseArea(.T.,'TOPCONN',TCGenQry(,,cQry),'ANA',.T.)
 	If MV_PAR09 == 1
 		aAdd(aExcel, {'', 'Por NCM'})
@@ -882,7 +890,9 @@ ElseIf nTipo == 3
 		cQry += CRLF + "          FT_CNATREC,"
 		cQry += CRLF + "          CCZ_DESC"
 	EndIf
-	
+	If _cNoLock == ''
+		cQry := ChangeQuery(cQry)
+	EndIf
 	dbUseArea(.T.,'TOPCONN',TCGenQry(,,cQry),'ANA',.T.)
 	If MV_PAR09 == 1
 		aAdd(aExcel, {'', 'Por Tab+Cód Nat. Receita'})
@@ -980,7 +990,9 @@ ElseIf nTipo == 4
 		cQry += CRLF + " ORDER BY FT_FILIAL,"
 		cQry += CRLF + "          FT_CFOP"
 	EndIf
-	
+	If _cNoLock == ''
+		cQry := ChangeQuery(cQry)
+	EndIf
 	dbUseArea(.T.,'TOPCONN',TCGenQry(,,cQry),'ANA',.T.)
 	If MV_PAR09 == 1
 		aAdd(aExcel, {'', 'Por CFOP'})

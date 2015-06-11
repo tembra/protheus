@@ -44,7 +44,7 @@ Default cFilAte := ''
 Default cFilCST := ''
 
 //ativa NOLOCK nas queries SQL caso seja referente a um ano anterior do corrente
-If Year(dData2) < Year(Date())
+If Year(dData2) < Year(Date()) .and. TCGetDB() == 'MSSQL'
 	cNoLock := 'WITH (NOLOCK)'
 EndIf
 
@@ -187,6 +187,9 @@ If AllTrim(aEntSai[2][2]) <> ''
 	cQry += CRLF + "   AND CTT_TDCRPC = 'S'"
 EndIf
 
+If cNoLock == ''
+	cQry := ChangeQuery(cQry)
+EndIf
 dbUseArea(.T.,'TOPCONN',TCGenQry(,,cQry),'MQRY',.T.)
 While !MQRY->(Eof())
 	lGera := .T.

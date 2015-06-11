@@ -36,7 +36,7 @@ ElseIf MV_PAR03 > MV_PAR04
 EndIf
 
 //ativa NOLOCK nas queries SQL caso seja referente a um ano anterior do corrente
-If Year(MV_PAR02) < Year(Date())
+If Year(MV_PAR02) < Year(Date()) .and. TCGetDB() == 'MSSQL'
 	_cNoLock := 'WITH (NOLOCK)'
 EndIf
 
@@ -111,6 +111,9 @@ While dMyData <= dMyDataAte
 	cQry += "   AND FI_FILIAL <= '"+MV_PAR04+"'"
 	cQry += " GROUP BY FI_FILIAL, FI_DTMOVTO, FI_PDV, FI_NUMERO, FI_NUMREDZ, FI_SERPDV, FI_NUMINI, FI_NUMFIM"
 	cQry += " ORDER BY FI_FILIAL, FI_DTMOVTO, FI_PDV, FI_NUMERO, FI_NUMREDZ"
+	If _cNoLock == ''
+		cQry := ChangeQuery(cQry)
+	EndIf
 	dbUseArea(.T.,'TOPCONN',TCGenQry(,,cQry),'SSFI',.T.)	
 	While !SSFI->(Eof())
 		aAdd(aDados, {AllTrim(SSFI->FI_FILIAL), AllTrim(SSFI->FI_DTMOVTO), AllTrim(SSFI->FI_PDV), AllTrim(SSFI->FI_NUMREDZ), AllTrim(SSFI->FI_SERPDV), SSFI->VALCONT, 0, 0, '', '', '', ''})
@@ -131,6 +134,9 @@ While dMyData <= dMyDataAte
 	cQry += " GROUP BY FT_FILIAL, FT_ENTRADA, FT_PDV, FT_NFISCAL) AS SSFT"
 	cQry += " GROUP BY SSFT.FT_FILIAL, SSFT.FT_ENTRADA, SSFT.FT_PDV"
 	cQry += " ORDER BY SSFT.FT_FILIAL, SSFT.FT_ENTRADA, SSFT.FT_PDV"
+	If _cNoLock == ''
+		cQry := ChangeQuery(cQry)
+	EndIf
 	dbUseArea(.T.,'TOPCONN',TCGenQry(,,cQry),'SSFT',.T.)	
 	While !SSFT->(Eof())
 		_nPos := aScan(aDados, {|x| x[1]+x[2]+X[3] == AllTrim(SSFT->FT_FILIAL)+AllTrim(SSFT->FT_ENTRADA)+AllTrim(SSFT->FT_PDV)})
@@ -158,6 +164,9 @@ While dMyData <= dMyDataAte
 	cQry += " GROUP BY D2_FILIAL, D2_EMISSAO, D2_PDV, D2_DOC) AS SSD2"
 	cQry += " GROUP BY SSD2.D2_FILIAL, SSD2.D2_EMISSAO, SSD2.D2_PDV"
 	cQry += " ORDER BY SSD2.D2_FILIAL, SSD2.D2_EMISSAO, SSD2.D2_PDV"
+	If _cNoLock == ''
+		cQry := ChangeQuery(cQry)
+	EndIf
 	dbUseArea(.T.,'TOPCONN',TCGenQry(,,cQry),'SSD2',.T.)	
 	While !SSD2->(Eof())
 		_nPos := aScan(aDados, {|x| x[1]+x[2]+X[3] == AllTrim(SSD2->D2_FILIAL)+AllTrim(SSD2->D2_EMISSAO)+AllTrim(SSD2->D2_PDV)})

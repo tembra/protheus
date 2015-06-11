@@ -46,7 +46,7 @@ If AllTrim(MV_PAR04) == ''
 EndIf
 
 //ativa NOLOCK nas queries SQL caso seja referente a um ano anterior do corrente
-If Year(MV_PAR03) < Year(Date())
+If Year(MV_PAR03) < Year(Date()) .and. TCGetDB() == 'MSSQL'
 	_cNoLock := 'WITH (NOLOCK)'
 EndIf
 
@@ -144,7 +144,9 @@ Else
 	cQry += CRLF + "   ,B1_COD"
 EndIf
 
-cQry := ChangeQuery(cQry)
+If _cNoLock == ''
+	cQry := ChangeQuery(cQry)
+EndIf
 dbUseArea(.T.,'TOPCONN',TCGenQry(,,cQry),'MQRY',.T.)
 
 nQtd := 0
@@ -299,7 +301,9 @@ EndIf
 cQry += CRLF + " ORDER BY"
 cQry += CRLF + "    FT_ENTRADA DESC"
 
-cQry := ChangeQuery(cQry)
+If _cNoLock == ''
+	cQry := ChangeQuery(cQry)
+EndIf
 dbUseArea(.T.,'TOPCONN',TCGenQry(,,cQry),'NOTA',.T.)
 
 While !NOTA->(Eof())
