@@ -44,7 +44,7 @@ Default cFilAte := ''
 Default cFilCST := ''
 
 //ativa NOLOCK nas queries SQL caso seja referente a um ano anterior do corrente
-If Year(dData2) < Year(Date()) .and. TCGetDB() == 'MSSQL'
+If Year(dData2) < Year(Date()) .and. 'MSSQL' $ TCGetDB()
 	cNoLock := 'WITH (NOLOCK)'
 EndIf
 

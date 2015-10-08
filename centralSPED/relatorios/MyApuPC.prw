@@ -181,6 +181,7 @@
 #define AJUCON_ULTIMO    13
 
 #define AJUCRE_TIPO_DEVOLUCAO 01
+#define AJUCRE_TIPO_CONSUMO   02
 
 #define AJUCRE_TIPO      01
 #define AJUCRE_FILIAL    02
@@ -261,7 +262,7 @@ Else
 EndIf
 
 //ativa NOLOCK nas queries SQL caso seja referente a um ano anterior do corrente
-If MV_PAR02 < Year(Date()) .and. TCGetDB() == 'MSSQL'
+If MV_PAR02 < Year(Date()) .and. 'MSSQL' $ TCGetDB()
 	_cNoLock := 'WITH (NOLOCK)'
 EndIf
 
@@ -341,6 +342,7 @@ cQry += CRLF + " AND F3_SERIE = FT_SERIE"
 cQry += CRLF + " AND F3_CLIEFOR = FT_CLIEFOR"
 cQry += CRLF + " AND F3_LOJA = FT_LOJA"
 cQry += CRLF + " AND F3_CFO = FT_CFOP"
+cQry += CRLF + " AND F3_ALIQICM = FT_ALIQICM"
 cQry += CRLF + " AND F3_TIPO = FT_TIPO"
 cQry += CRLF + " AND F3_IDENTFT = FT_IDENTF3"
 cQry += CRLF + " WHERE LEFT(FT_ENTRADA,6) = '" + _cMesAtu + "'"
@@ -400,6 +402,8 @@ aAdd(aExcel, {'Considera títulos: '+Iif(MV_PAR09==1,'Sim','Não')})
 aAdd(aExcel, {'Considera ativo aquisição: '+Iif(MV_PAR10==1,'Sim','Não')})
 aAdd(aExcel, {'Considera ativo depreciação: '+Iif(MV_PAR11==1,'Sim','Não')})
 aAdd(aExcel, {'Considera cancelados: '+Iif(MV_PAR12==1,'Dentro do período','Todos')})
+aAdd(aExcel, {'Considera consumo 5949: '+Iif(MV_PAR13==1,'Não','Sim')})
+aAdd(aExcel, {'Ajuste de crédito p/ consumo 5949: '+Iif(MV_PAR14==1,'Não gerar','Gerar')})
 
 cFAnt  := ''
 aCFOP  := {}
@@ -848,6 +852,7 @@ PorCST(aExcel,_aCSTG,.T.,'CFOPs + Títulos + Ativo [Aquisição] + Ativo [Depreciaç
 AjuConCan(aExcel,cFAnt,.T.)
 AjuConAnu(aExcel,cFAnt,.T.)
 AjuCreDev(aExcel,cFAnt,.T.)
+AjuCreCon(aExcel,cFAnt,.T.)
 
 ApuFinal(aExcel)
 
@@ -1070,7 +1075,7 @@ For nI := 1 to nMax
 			_aApura[APU_CON][APU_VALCOF] += aCST[nI][CST_VALCOF]
 			_aApura[APU_CON][APU_CALPIS] += nCalPIS
 			_aApura[APU_CON][APU_CALCOF] += nCalCOF
-		ElseIf aCST[nI][CST_CST] == '50'
+		ElseIf aCST[nI][CST_CST] == '50' .or. aCST[nI][CST_CST] == '53'
 			_aApura[APU_CRE][APU_VALPIS] += aCST[nI][CST_VALPIS]
 			_aApura[APU_CRE][APU_VALCOF] += aCST[nI][CST_VALCOF]
 			_aApura[APU_CRE][APU_CALPIS] += nCalPIS
@@ -2371,6 +2376,7 @@ PorCST(aExcel,_aCSTG,.T.,'CFOPs + Títulos + Ativo [Aquisição] + Ativo [Depreciaç
 AjuConCan(aExcel,cFAnt)
 AjuConAnu(aExcel,cFAnt)
 AjuCreDev(aExcel,cFAnt)
+AjuCreCon(aExcel,cFAnt)
 
 //não é necessário remover devolução de compras DENTRO do período do array de Natureza de Receita
 //pois só são estornadas as devoluções de CST 50 e este CST não se aplica aos registros com Natureza de Receita
@@ -2441,6 +2447,7 @@ If !lGeral
 	cQry += CRLF + " AND F3_CLIEFOR = FT_CLIEFOR"
 	cQry += CRLF + " AND F3_LOJA = FT_LOJA"
 	cQry += CRLF + " AND F3_CFO = FT_CFOP"
+	cQry += CRLF + " AND F3_ALIQICM = FT_ALIQICM"
 	cQry += CRLF + " AND F3_TIPO = FT_TIPO"
 	cQry += CRLF + " AND F3_IDENTFT = FT_IDENTF3"
 	cQry += CRLF + " WHERE SFT.D_E_L_E_T_ <> '*'"
@@ -2556,6 +2563,7 @@ If !lGeral
 	cQry += CRLF + " AND F3_CLIEFOR = FT_CLIEFOR"
 	cQry += CRLF + " AND F3_LOJA = FT_LOJA"
 	cQry += CRLF + " AND F3_CFO = FT_CFOP"
+	cQry += CRLF + " AND F3_ALIQICM = FT_ALIQICM"
 	cQry += CRLF + " AND F3_TIPO = FT_TIPO"
 	cQry += CRLF + " AND F3_IDENTFT = FT_IDENTF3"
 	cQry += CRLF + " WHERE SFT.D_E_L_E_T_ <> '*'"
@@ -2791,6 +2799,258 @@ Return Nil
 
 /* -------------- */
 
+Static Function AjuCreCon(aExcel, cFAnt, lGeral)
+
+Local cQry
+Local nSomaPis := 0
+Local nSomaCof := 0
+Local nSomaBPis := 0
+Local nSomaBCof := 0
+Local nI, nJ, nMax
+Local aAux
+Local cAux
+Local aNota := {}
+Local nBasePis, nBaseCof, nValPis, nValCof
+Local cTes := '537;538'
+Local cCNPJ := '04976718'
+
+Default lGeral := .F.
+
+//somente executa se selecionado pelo usuário
+If MV_PAR13 == 1
+	Return Nil
+EndIf
+
+If !lGeral
+	SX6->(dbGoTop())
+	If !SX6->(dbSeek('  MY_CREDCON'))
+		RecLock('SX6',.T.)
+		SX6->X6_VAR     := 'MY_CREDCON'
+		SX6->X6_TIPO    := 'C'
+		SX6->X6_DESCRIC := 'Informe as TES,CNPJs das notas de consumo 5949 que'
+		SX6->X6_DESC1   := 'o crédito será estornado no relatório de apuração '
+		SX6->X6_DESC2   := 'do PIS/COFINS. Ex: 537,538;04976718               '
+		SX6->X6_CONTEUD := StrTran(cTes, ';', ',') + ';' + StrTran(cCNPJ, ';', ',')
+		SX6->X6_PROPRI  := 'U'
+		SX6->(MsUnlock())
+	Else
+		aAux := Separa(SX6->X6_CONTEUD, ';')
+		If Len(aAux) == 2
+			cTes := StrTran(aAux[1], ',', ';')
+			cCNPJ := StrTran(aAux[2], ',', ';')
+		Else
+			MsgAlert('O parâmetro MY_CREDCON está definido de forma incorreta!' + CRLF +;
+			'Serão assumidas as seguintes configurações:' + CRLF +;
+			'> TES: ' + cTes + CRLF +;
+			'> CNPJs: ' + cCNPJ)
+		EndIf
+	EndIf
+	
+	cQry := CRLF + " SELECT"
+	cQry += CRLF + "    FT_NFISCAL"
+	cQry += CRLF + "   ,FT_SERIE"
+	cQry += CRLF + "   ,FT_ENTRADA"
+	cQry += CRLF + "   ,SUM(FT_VALCONT) AS FT_VALCONT"
+	cQry += CRLF + " FROM ("
+	cQry += CRLF + "   SELECT"
+	cQry += CRLF + "      FT_NFISCAL"
+	cQry += CRLF + "     ,FT_SERIE"
+	cQry += CRLF + "     ,FT_ENTRADA"
+	cQry += CRLF + "     ,FT_VALCONT"
+	cQry += CRLF + "     ,ISNULL(("
+	cQry += CRLF + "         SELECT TOP 1"
+	cQry += CRLF + "            ZPI_NCM"
+	cQry += CRLF + "         FROM " + RetSqlName('ZPI') + " ZPI " + _cNoLock
+	cQry += CRLF + "         WHERE ZPI.D_E_L_E_T_ <> '*'"
+	cQry += CRLF + "           AND ZPI_FILIAL = '" + xFilial('ZPI') + "'"
+	cQry += CRLF + "           AND ZPI_NCM = FT_POSIPI"
+	cQry += CRLF + "           AND ZPI_EX_NCM = B1_EX_NCM"
+	cQry += CRLF + "           AND ("
+	cQry += CRLF + "                FT_ENTRADA BETWEEN ZPI_DTININ COLLATE database_default AND ZPI_DTFIMN COLLATE database_default"
+	cQry += CRLF + "             OR ("
+	cQry += CRLF + "                   FT_ENTRADA > ZPI_DTININ COLLATE database_default"
+	cQry += CRLF + "               AND ZPI_DTFIMN COLLATE database_default = ''"
+	cQry += CRLF + "             )"
+	cQry += CRLF + "           )"
+	cQry += CRLF + "      ),'') AS ZPI_NCM"
+	cQry += CRLF + "   FROM " + RetSqlName('SFT') + " SFT " + _cNoLock
+	cQry += CRLF + "   LEFT JOIN " + RetSqlName('SD2') + " SD2 " + _cNoLock
+	cQry += CRLF + "   ON  SD2.D_E_L_E_T_ <> '*'"
+	cQry += CRLF + "   AND D2_FILIAL = '" + xFilial('SD2') + "'"
+	cQry += CRLF + "   AND D2_DOC = FT_NFISCAL"
+	cQry += CRLF + "   AND D2_SERIE = FT_SERIE"
+	cQry += CRLF + "   AND D2_CLIENTE = FT_CLIEFOR"
+	cQry += CRLF + "   AND D2_LOJA = FT_LOJA"
+	cQry += CRLF + "   AND D2_ITEM = FT_ITEM"
+	cQry += CRLF + "   AND D2_COD = FT_PRODUTO"
+	cQry += CRLF + "   AND D2_CF = FT_CFOP"
+	cQry += CRLF + "   LEFT JOIN " + RetSqlName('SA1') + " SA1 " + _cNoLock
+	cQry += CRLF + "   ON  SA1.D_E_L_E_T_ <> '*'"
+	cQry += CRLF + "   AND A1_FILIAL = '" + xFilial('SA1') + "'"
+	cQry += CRLF + "   AND A1_COD = FT_CLIEFOR"
+	cQry += CRLF + "   AND A1_LOJA = FT_LOJA"
+	cQry += CRLF + "   LEFT JOIN " + RetSqlName('SB1') + " SB1 " + _cNoLock
+	cQry += CRLF + "   ON  SB1.D_E_L_E_T_ <> '*'"
+	cQry += CRLF + "   AND B1_FILIAL = '" + xFilial('SB1') + "'"
+	cQry += CRLF + "   AND B1_COD = FT_PRODUTO"
+	cQry += CRLF + "   WHERE SFT.D_E_L_E_T_ <> '*'"
+	cQry += CRLF + "     AND FT_FILIAL = '" + xFilial('SFT') + "'"
+	cQry += CRLF + "     AND LEFT(FT_ENTRADA,6) = '" + _cMesAtu + "'"
+	cQry += CRLF + "     AND FT_CFOP = '5949'"
+	cQry += CRLF + "     AND FT_CSTPIS = '49'"
+	cQry += CRLF + "     AND D2_TES IN " + U_MyGeraIn(cTes)
+	cQry += CRLF + "     AND LEFT(A1_CGC,8) IN " + U_MyGeraIn(cCNPJ)
+	cQry += CRLF + " ) AS TEMP"
+	cQry += CRLF + " WHERE ZPI_NCM = ''"
+	cQry += CRLF + " GROUP BY FT_ENTRADA"
+	cQry += CRLF + "         ,FT_SERIE"
+	cQry += CRLF + "         ,FT_NFISCAL"
+	cQry += CRLF + " ORDER BY FT_ENTRADA"
+	cQry += CRLF + "         ,FT_SERIE"
+	cQry += CRLF + "         ,FT_NFISCAL"
+	dbUseArea(.T.,'TOPCONN',TCGenQry(,,cQry),'AJUCRE',.T.)
+EndIf
+
+aAdd(aExcel, {'Documentos de Consumo Interno (Estorno) - Ajuste do Crédito para o PIS/COFINS Apurado'})
+If !lGeral
+	aAdd(aExcel, {;
+		'Dados da NF de Consumo Interno (SFT)';
+	})
+	aAdd(aExcel, {;
+		'Número','Série','Data Entrada','Valor Contábil','Base PIS','Base COFINS','Valor PIS','Valor COFINS';
+	})
+Else
+	aAdd(aExcel, {;
+		'',;
+		'Dados da NF de Consumo Interno (SFT)';
+	})
+	aAdd(aExcel, {;
+		'Filial',;
+		'Número','Série','Data Entrada','Valor Contábil','Base PIS','Base COFINS','Valor PIS','Valor COFINS';
+	})
+EndIf
+
+If !lGeral
+	While !AJUCRE->(Eof())
+		nBasePis := AJUCRE->FT_VALCONT
+		nBaseCof := AJUCRE->FT_VALCONT
+		nValPis := Round(nBasePis * MV_PAR07 / 100, 2)
+		nValCof := Round(nBaseCof * MV_PAR08 / 100, 2)
+		
+		aAdd(aExcel, {;
+			AJUCRE->FT_NFISCAL,AJUCRE->FT_SERIE,DTOC(STOD(AJUCRE->FT_ENTRADA)),AJUCRE->FT_VALCONT,nBasePis,nBaseCof,nValPis,nValCof;
+		})
+		aAdd(_aAjuCreG, {;
+			AJUCRE_TIPO_CONSUMO,;
+			cFAnt,;
+			AJUCRE->FT_NFISCAL,AJUCRE->FT_SERIE,DTOC(STOD(AJUCRE->FT_ENTRADA)),AJUCRE->FT_VALCONT,,,,,,,nBasePis,nBaseCof,nValPis,nValCof;
+		})
+		
+		GeraCF5('0', nValPis, AJUCRE->FT_NFISCAL, AJUCRE->FT_SERIE, AJUCRE->FT_ENTRADA)
+		GeraCF5('1', nValCof, AJUCRE->FT_NFISCAL, AJUCRE->FT_SERIE, AJUCRE->FT_ENTRADA)
+		
+		nSomaPis += nValPis
+		nSomaCof += nValCof
+		nSomaBPis += nBasePis
+		nSomaBCof += nBaseCof
+		AJUCRE->(dbSkip())
+	EndDo
+	AJUCRE->(dbCloseArea())
+Else
+	nMax := Len(_aAjuCreG)
+	For nI := 1 to nMax
+		If _aAjuCreG[nI][AJUCRE_TIPO] == AJUCRE_TIPO_CONSUMO
+			aAux := {}
+			For nJ := AJUCRE_TIPO+1 to AJUCRE_SVALCONT
+				aAdd(aAux, _aAjuCreG[nI][nJ])
+			Next nJ
+			aAdd(aAux, _aAjuCreG[nI][AJUCRE_EBASEPIS])
+			aAdd(aAux, _aAjuCreG[nI][AJUCRE_EBASECOF])
+			aAdd(aAux, _aAjuCreG[nI][AJUCRE_EVALPIS])
+			aAdd(aAux, _aAjuCreG[nI][AJUCRE_EVALCOF])
+			aAdd(aExcel, aClone(aAux))
+			
+			nSomaPis += _aAjuCreG[nI][AJUCRE_EVALPIS]
+			nSomaCof += _aAjuCreG[nI][AJUCRE_EVALCOF]
+			nSomaBPis += _aAjuCreG[nI][AJUCRE_EBASEPIS]
+			nSomaBCof += _aAjuCreG[nI][AJUCRE_EBASECOF]
+		EndIf
+	Next nI
+EndIf
+
+If !lGeral
+	aAdd(aExcel, {'', 'Valor total do ajuste', '', '', nSomaBPis, nSomaBCof, nSomaPis, nSomaCof})
+Else
+	aAdd(aExcel, {'', '', 'Valor total do ajuste', '', '', nSomaBPis, nSomaBCof, nSomaPis, nSomaCof})
+EndIf
+aAdd(aExcel, {''})
+
+If lGeral
+	_aApura[APU_CRE_RED][APU_VALPIS] += nSomaPis
+	_aApura[APU_CRE_RED][APU_VALCOF] += nSomaCof
+	_aApura[APU_CRE_RED][APU_CALPIS] += nSomaPis
+	_aApura[APU_CRE_RED][APU_CALCOF] += nSomaCof
+EndIf
+
+Return Nil
+
+/* -------------- */
+
+Static Function GeraCF5(cTipo, nValor, cNota, cSerie, cEntrada)
+
+Local cQry
+Local nRecNo := 0
+
+If MV_PAR14 == 2
+	cQry := " SELECT"
+	cQry += "    R_E_C_N_O_ AS RECNUM"
+	cQry += " FROM " + RetSqlName('CF5')
+	cQry += " WHERE D_E_L_E_T_ <> '*'"
+	cQry += "   AND CF5_FILIAL = '" + xFilial('CF5') + "'"
+	cQry += "   AND CF5_INDAJU = '0'"
+	cQry += "   AND CF5_PISCOF = '" + cTipo + "'"
+	cQry += "   AND CF5_CODAJU = '06'"
+	cQry += "   AND CF5_NUMDOC = '" + cNota + "'"
+	cQry += "   AND CF5_DESAJU LIKE '" + cSerie + "/" + cNota + "%'"
+	cQry += "   AND CF5_DTREF  = '" + cEntrada + "'"
+	cQry += "   AND CF5_CODCRE = '101'"
+	
+	dbUseArea(.T.,'TOPCONN',TCGenQry(,,cQry),'CF5QRY',.T.)
+	While !CF5QRY->(Eof())
+		nRecNo := CF5QRY->RECNUM
+		CF5QRY->(dbSkip())
+	EndDo
+	CF5QRY->(dbCloseArea())
+	
+	If nRecNo > 0
+		CF5->(dbGoTop())
+		CF5->(dbGoTo(nRecNo))
+		RecLock('CF5', .F.)
+	Else
+		RecLock('CF5', .T.)
+	EndIf
+	CF5->CF5_FILIAL := xFilial('CF5')
+	CF5->CF5_INDAJU := '0'
+	CF5->CF5_PISCOF := cTipo
+	CF5->CF5_VALAJU := nValor
+	CF5->CF5_CODAJU := '06'
+	CF5->CF5_NUMDOC := cNota
+	CF5->CF5_DESAJU := cSerie + '/' + cNota + ' REF CONSUMO INT.'
+	CF5->CF5_DTREF  := STOD(cEntrada)
+	CF5->CF5_CODCRE := '101'
+	If nRecNo == 0
+		CF5->CF5_CODIGO := GetSXENum('CF5','CF5_CODIGO')
+	EndIf
+	CF5->(MsUnlock())
+	If nRecNo == 0
+		ConfirmSX8()
+	EndIf
+EndIf
+			
+Return Nil
+
+/* -------------- */
+
 Static Function DevCom(aDvCom,cFAnt)
 
 Local cQry
@@ -2955,7 +3215,7 @@ aAdd(aExcel, {'Demonstração dos Créditos Apurados no Período'})
 aAdd(aExcel, {'Descrição','Relação','Valor PIS','Valor COFINS','Calculado PIS','Calculado COFINS'})
 aAdd(aExcel, {;
 	'5. Valor Total do Crédito Apurado',;
-	'CST 50',;
+	'CST 50 + 53',;
 	_aApura[APU_CRE][APU_VALPIS],;
 	_aApura[APU_CRE][APU_VALCOF],;
 	_aApura[APU_CRE][APU_CALPIS],;
@@ -4006,6 +4266,38 @@ PutSx1(PadR(cPerg,nTamGrp), '12', cNome, cNome, cNome,;
 'MV_CHC', 'C', 1, 0, 1, 'C', '(MV_PAR12 == 1)', '', '', '', 'MV_PAR12',;
 'Dentro período', 'Dentro período', 'Dentro período', '1',;
 'Todos', 'Todos', 'Todos',;
+'', '', '',;
+'', '', '',;
+'', '', '',;
+aClone(aHelpPor), aClone(aHelpEng), aClone(aHelpSpa))
+
+aHelpPor := {}
+aAdd(aHelpPor, 'Informe se deseja considerar os      ')
+aAdd(aHelpPor, 'documentos de consumo 5949 como      ')
+aAdd(aHelpPor, 'estorno de crédito. O parâmetro      ')
+aAdd(aHelpPor, 'customizado MY_CREDCON será          ')
+aAdd(aHelpPor, 'utilizado.                           ')
+cNome := 'Considera consumo 5949'
+PutSx1(PadR(cPerg,nTamGrp), '13', cNome, cNome, cNome,;
+'MV_CHD', 'C', 1, 0, 1, 'C', '', '', '', '', 'MV_PAR13',;
+'Não', 'Não', 'Não', '1',;
+'Sim', 'Sim', 'Sim',;
+'', '', '',;
+'', '', '',;
+'', '', '',;
+aClone(aHelpPor), aClone(aHelpEng), aClone(aHelpSpa))
+
+aHelpPor := {}
+aAdd(aHelpPor, 'Informe se deseja gerar os ajustes de')
+aAdd(aHelpPor, 'créditos (CF5) das notas de consumo  ')
+aAdd(aHelpPor, '5949 de forma automática. Disponível ')
+aAdd(aHelpPor, 'apenas se o parâmetro acima,         ')
+aAdd(aHelpPor, '"Considera consumo 5949" = Sim       ')
+cNome := 'Aj. crédito p/ consumo 5949'
+PutSx1(PadR(cPerg,nTamGrp), '14', cNome, cNome, cNome,;
+'MV_CHE', 'C', 1, 0, 1, 'C', '', '', '', '', 'MV_PAR14',;
+'Não gerar', 'Não gerar', 'Não gerar', '1',;
+'Gerar', 'Gerar', 'Gerar',;
 '', '', '',;
 '', '', '',;
 '', '', '',;

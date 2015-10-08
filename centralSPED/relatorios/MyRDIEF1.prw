@@ -28,7 +28,7 @@ ElseIf MV_PAR01 > MV_PAR02
 EndIf
 
 //ativa NOLOCK nas queries SQL caso seja referente a um ano anterior do corrente
-If Year(MV_PAR02) < Year(Date()) .and. TCGetDB() == 'MSSQL'
+If Year(MV_PAR02) < Year(Date()) .and. 'MSSQL' $ TCGetDB()
 	_cNoLock := 'WITH (NOLOCK)'
 EndIf
 
@@ -85,6 +85,7 @@ If MV_PAR03 == 2
 	cQry += CRLF + " AND D2_CLIENTE = F3_CLIEFOR"
 	cQry += CRLF + " AND D2_LOJA = F3_LOJA"
 	cQry += CRLF + " AND D2_CF = F3_CFO"
+	cQry += CRLF + " AND D2_PICM = F3_ALIQICM"
 	cQry += CRLF + " LEFT JOIN " + RetSqlName('SA1') + " SA1 " + _cNoLock
 	cQry += CRLF + " ON  SA1.D_E_L_E_T_ <> '*'"
 	cQry += CRLF + " AND A1_FILIAL = '" + xFilial('SA1') + "'"
@@ -148,6 +149,7 @@ ElseIf MV_PAR03 == 1
 	cQry += CRLF + " AND D2_CLIENTE = F3_CLIEFOR"
 	cQry += CRLF + " AND D2_LOJA = F3_LOJA"
 	cQry += CRLF + " AND D2_CF = F3_CFO"
+	cQry += CRLF + " AND D2_PICM = F3_ALIQICM"
 	cQry += CRLF + " LEFT JOIN " + RetSqlName('DT6') + " DT6 " + _cNoLock
 	cQry += CRLF + " ON  DT6.D_E_L_E_T_ <> '*'"
 	cQry += CRLF + " AND DT6_FILIAL = '" + xFilial('DT6') + "'"

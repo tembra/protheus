@@ -24,6 +24,12 @@ User Function MyRF3XFT()
 //    gerado pelo sistema origem (EMSys ou Seller). A diferença é colocada no
 //    item (SFT) com maior valor que possua CST 04,05,06 do PIS/COFINS. Caso
 //    não haja um item com esta CST, o usuário é informado.
+//
+// 4) Thieres Tembra - 18/08/15
+//    - Incluído colunas de Base ICMS e Valor ICMS para comparação.
+//    - Comentado ajuste automático da alteração 3
+//    - Adicionado relacionamento nos campos F3_IDENTFT e FT_IDENTF3
+//    - Adicionado FT_TIPO <> 'S' para equivalência com o F3_TIPO <> 'S'
 ///////////////////////////////////////////////////////////////////////////////
 
 Local cTitulo := 'Comparação Livro Fiscal x Itens (SF3 x SFT)'
@@ -44,17 +50,19 @@ ElseIf MV_PAR01 > MV_PAR02
 	Alert('A data final deve ser maior que a data inicial.')
 	Return Nil
 //Alt. (3)
+/*
 ElseIf MV_PAR08 == 1 .and. MV_PAR04 <> MV_PAR05
 	Alert('Para ajustar a diferença os campos "Da Filial" e "Ate Filial" devem ser iguais, pois o ajuste é feito por filial.')
 	Return Nil
 ElseIf MV_PAR08 == 1 .and. MV_PAR03 == 1
 	Alert('O ajuste de diferença é realizado somente no Livro de Saída.')
 	Return Nil
+*/
 //Fim Alt. (3)
 EndIf
 
 //ativa NOLOCK nas queries SQL caso seja referente a um ano anterior do corrente
-If Year(MV_PAR02) < Year(Date()) .and. TCGetDB() == 'MSSQL'
+If Year(MV_PAR02) < Year(Date()) .and. 'MSSQL' $ TCGetDB()
 	_cNoLock := 'WITH (NOLOCK)'
 EndIf
 
@@ -66,10 +74,12 @@ Return Nil
 
 Static Function TDF3XFT(cTitulo)
 
-Local nI, nMax, nSomaF3, nSomaFT, nX
+Local nI, nMax, nX
 Local cQry
 Local cRet, cAux
 Local cArq := 'F3xFT'
+Local aSomaF3 := {} //Alt. (4)
+Local aSomaFT := {} //Alt. (4)
 Local aDados := {}
 Local aDifF3 := {} //Alt. (2)
 Local aDifFT := {} //Alt. (2)
@@ -77,7 +87,11 @@ Local aExcel := {}
 Local aAux   := {} //Alt. (2)
 Local aDifs  := {aDifF3, aDifFT} //Alt. (2)
 
-cQry := " SELECT F3_CFO CFOP, ROUND(SUM(F3_VALCONT),2) VALCONT"
+cQry := " SELECT"
+cQry += "    F3_CFO CFOP"
+cQry += "   ,ROUND(SUM(F3_VALCONT),2) VALCONT"
+cQry += "   ,ROUND(SUM(F3_BASEICM),2) BASEICM" //Alt. (4)
+cQry += "   ,ROUND(SUM(F3_VALICM),2) VALICM" //Alt. (4)
 cQry += " FROM "+RetSqlName('SF3') + " " + _cNoLock
 cQry += " WHERE F3_ENTRADA >= '"+DTOS(MV_PAR01)+"'"
 cQry += "   AND F3_ENTRADA <= '"+DTOS(MV_PAR02)+"'"
@@ -103,7 +117,11 @@ dbUseArea(.T.,'TOPCONN',TCGenQry(,,cQry),'SSF3',.T.)
 Analisa('SSF3', aDados)
 SSF3->(dbCloseArea())
 
-cQry := " SELECT FT_CFOP CFOP, ROUND(SUM(FT_VALCONT),2) VALCONT"
+cQry := " SELECT"
+cQry += "    FT_CFOP CFOP"
+cQry += "   ,ROUND(SUM(FT_VALCONT),2) VALCONT"
+cQry += "   ,ROUND(SUM(FT_BASEICM),2) BASEICM" //Alt. (4)
+cQry += "   ,ROUND(SUM(FT_VALICM),2) VALICM"  //Alt. (4)
 cQry += " FROM "+RetSqlName('SFT') + " " + _cNoLock
 cQry += " WHERE FT_ENTRADA >= '"+DTOS(MV_PAR01)+"'"
 cQry += "   AND FT_ENTRADA <= '"+DTOS(MV_PAR02)+"'"
@@ -119,6 +137,7 @@ cQry += "   AND FT_FILIAL <= '"+MV_PAR05+"'"
 If AllTrim(MV_PAR06) <> ''
 	cQry += "   AND FT_CFOP IN "+U_MyGeraIn(AllTrim(MV_PAR06))
 EndIf
+cQry += "   AND FT_TIPO <> 'S'"
 cQry += " GROUP BY FT_CFOP"
 cQry += " ORDER BY FT_CFOP"
 If _cNoLock == ''
@@ -137,23 +156,28 @@ aAdd(aExcel, {cTitulo})
 aAdd(aExcel, {'Relatório emitido em '+DTOC(Date())+' por '+AllTrim(cUsername)})
 aAdd(aExcel, {'Período: '+DTOC(MV_PAR01)+' até '+DTOC(MV_PAR02)+' - Filial: '+MV_PAR04+' até '+MV_PAR05})
 aAdd(aExcel, {''})
-aAdd(aExcel, {'CFOP', 'Valor SF3', 'Valor SFT', 'Diferença (SF3-SFT)'})
-nSomaF3 := 0
-nSomaFT := 0
+aAdd(aExcel, {''    , 'SF3'           , ''         , ''          , 'SFT'           , ''         , ''          , 'Diferença (SF3-SFT)'})
+aAdd(aExcel, {'CFOP', 'Valor Contábil', 'Base ICMS', 'Valor ICMS', 'Valor Contábil', 'Base ICMS', 'Valor ICMS', 'Valor Contábil', 'Base ICMS', 'Valor ICMS'})
+aSomaF3 := {0,0,0}
+aSomaFT := {0,0,0}
 nMax := Len(aDados)
 For nI := 1 to nMax
-	aAdd(aExcel, {aDados[nI][1], aDados[nI][2], aDados[nI][3], aDados[nI][2]-aDados[nI][3]})
-	nSomaF3 += aDados[nI][2]
-	nSomaFT += aDados[nI][3]
+	aAdd(aExcel, {aDados[nI][1], aDados[nI][2], aDados[nI][3], aDados[nI][4], aDados[nI][5], aDados[nI][6], aDados[nI][7], aDados[nI][2]-aDados[nI][5], aDados[nI][3]-aDados[nI][6], aDados[nI][4]-aDados[nI][7]})
+	aSomaF3[1] += aDados[nI][2]
+	aSomaF3[2] += aDados[nI][3]
+	aSomaF3[3] += aDados[nI][4]
+	aSomaFT[1] += aDados[nI][5]
+	aSomaFT[2] += aDados[nI][6]
+	aSomaFT[3] += aDados[nI][7]
 Next nI
-aAdd(aExcel, {'Total',nSomaF3,nSomaFT})
+aAdd(aExcel, {'Total',aSomaF3[1],aSomaF3[2],aSomaF3[3],aSomaFT[1],aSomaFT[2],aSomaFT[3]})
 
 If MV_PAR07 == 1
 	//Alt. (1) Alt. (2)
 	For nX := 1 to Len(aDifs)
 		aAux := aClone(aDifs[nX])
 		aAdd(aExcel, {''})
-		aAdd(aExcel, {'Notas com divergências ('+Iif(nX==1,'F3','FT')+' a maior)'})
+		aAdd(aExcel, {'Notas com divergências no valor contábil ('+Iif(nX==1,'F3','FT')+' a maior)'})
 		aAdd(aExcel, {'CFOP', 'Nota', 'Série', 'Fornecedor/Cliente', 'Entrada', 'Valor SF3', 'Valor SFT', 'Diferença ('+Iif(nX==1,'SF3-SFT','SFT-SF3')+') por Nota'})
 		nMax := Len(aAux)
 		nSomaF3 := 0
@@ -183,11 +207,13 @@ EndIf
 
 //Alt. (3)
 //ajusta diferença somente se for livro de saída
+/*
 If MV_PAR08 == 1 .and. MV_PAR03 == 2
-	If MsgYesNo('Deseja realmente ajustar a diferença encontrada?')
+	If MsgYesNo('Deseja realmente ajustar a diferença (somente valor contábil) encontrada?')
 		MsAguarde({|| AjustaDif(@aDados) },'Ajustando Diferença','Aguarde...')
 	Endif
 EndIf
+*/
 //Fim Alt. (3)
 
 Return Nil
@@ -196,28 +222,41 @@ Return Nil
 
 Static Function Analisa(cAlias, aDados)
 
-Local nValF3, nValFT, nPos
+Local aValF3, aValFT, nPos
 
 While !(cAlias)->(Eof())
 	If cAlias == 'SSF3'
-		nValF3 := (cAlias)->VALCONT
-		nValFT := 0
+		aValF3 := {(cAlias)->VALCONT, (cAlias)->BASEICM, (cAlias)->VALICM}
+		aValFT := {0,0,0}
 	ElseIf cAlias == 'SSFT'
-		nValF3 := 0
-		nValFT := (cAlias)->VALCONT
+		aValF3 := {0,0,0}
+		aValFT := {(cAlias)->VALCONT, (cAlias)->BASEICM, (cAlias)->VALICM}
 	Else
-		nValF3 := 0
-		nValFT := 0
+		aValF3 := {0,0,0}
+		aValFT := {0,0,0}
 	EndIf
 	
 	nPos := aScan(aDados, {|x| x[1] == (cAlias)->CFOP })
 	If nPos == 0
-		aAdd(aDados, { (cAlias)->CFOP, nValF3, nValFT })
+		aAdd(aDados, { (cAlias)->CFOP, aValF3[1], aValF3[2], aValF3[3], aValFT[1], aValFT[2], aValFT[3] })
 	Else
-		If nValF3 <> 0
-			aDados[nPos][2] := nValF3
-		ElseIf nValFT <> 0
-			aDados[nPos][3] := nValFT
+		If aValF3[1] <> 0
+			aDados[nPos][2] := aValF3[1]
+		EndIf
+		If aValF3[2] <> 0
+			aDados[nPos][3] := aValF3[2]
+		EndIf
+		If aValF3[3] <> 0
+			aDados[nPos][4] := aValF3[3]
+		EndIf
+		If aValFT[1] <> 0
+			aDados[nPos][5] := aValFT[1]
+		EndIf
+		If aValFT[2] <> 0
+			aDados[nPos][6] := aValFT[2]
+		EndIf
+		If aValFT[3] <> 0
+			aDados[nPos][7] := aValFT[3]
 		EndIf
 	EndIf
 	
@@ -244,6 +283,7 @@ For nI := 1 to nMax
 			cQry += "        F3_CLIEFOR,"
 			cQry += "        F3_LOJA,"
 			cQry += "        F3_CFO,"
+			cQry += "        F3_IDENTFT,"
 			cQry += "        F3_VALCONT VALOR"
 			cQry += " FROM "+RetSqlName('SF3') + " " + _cNoLock
 			cQry += " WHERE F3_ENTRADA >= '"+DTOS(MV_PAR01)+"'"
@@ -258,7 +298,8 @@ For nI := 1 to nMax
 			cQry += "          F3_NFISCAL,"
 			cQry += "          F3_SERIE,"
 			cQry += "          F3_CLIEFOR,"
-			cQry += "          F3_LOJA"
+			cQry += "          F3_LOJA,"
+			cQry += "          F3_IDENTFT"
 		ElseIf nTipo == 2
 			cQry := " SELECT FT_FILIAL,"
 			cQry += "        FT_ENTRADA,"
@@ -266,6 +307,7 @@ For nI := 1 to nMax
 			cQry += "        FT_SERIE,"
 			cQry += "        FT_CLIEFOR,"
 			cQry += "        FT_LOJA,"
+			cQry += "        FT_IDENTF3,"
 			cQry += "        ROUND(SUM(FT_VALCONT),2) VALOR"
 			cQry += " FROM "+RetSqlName('SFT') + " " + _cNoLock
 			cQry += " WHERE FT_ENTRADA >= '"+DTOS(MV_PAR01)+"'"
@@ -280,13 +322,15 @@ For nI := 1 to nMax
 			cQry += "          FT_SERIE,"
 			cQry += "          FT_CLIEFOR,"
 			cQry += "          FT_LOJA,"
-			cQry += "          FT_ENTRADA"
+			cQry += "          FT_ENTRADA,"
+			cQry += "          FT_IDENTF3"
 			cQry += " ORDER BY FT_FILIAL,"
 			cQry += "          FT_NFISCAL,"
 			cQry += "          FT_SERIE,"
 			cQry += "          FT_CLIEFOR,"
 			cQry += "          FT_LOJA,"
-			cQry += "          FT_ENTRADA"
+			cQry += "          FT_ENTRADA,"
+			cQry += "          FT_IDENTF3"
 		EndIf
 		If _cNoLock == ''
 			cQry := ChangeQuery(cQry)
@@ -307,6 +351,8 @@ For nI := 1 to nMax
 				cQry += "   AND FT_LOJA    = '"+MQRY1->F3_LOJA+"'"
 				cQry += "   AND FT_ENTRADA = '"+MQRY1->F3_ENTRADA+"'"
 				cQry += "   AND FT_FILIAL  = '"+MQRY1->F3_FILIAL+"'"
+				cQry += "   AND FT_IDENTF3 = '"+MQRY1->F3_IDENTFT+"'"
+				cQry += "   AND FT_TIPO   <> 'S'"
 			ElseIf nTipo == 2
 				cQry := " SELECT ROUND(SUM(F3_VALCONT),2) VALOR"
 				cQry += " FROM "+RetSqlName('SF3') + " " + _cNoLock
@@ -318,6 +364,7 @@ For nI := 1 to nMax
 				cQry += "   AND F3_CLIEFOR  = '"+MQRY1->FT_CLIEFOR+"'"
 				cQry += "   AND F3_ENTRADA  = '"+MQRY1->FT_ENTRADA+"'"
 				cQry += "   AND F3_FILIAL   = '"+MQRY1->FT_FILIAL+"'"
+				cQry += "   AND F3_IDENTFT  = '"+MQRY1->FT_IDENTF3+"'"
 				cQry += "   AND F3_TIPO    <> 'S'"
 			EndIf
 			If _cNoLock == ''
@@ -357,6 +404,7 @@ Return Nil
 
 /* -------------- */
 
+/*
 Static Function AjustaDif(aDados)
 
 Local cQry := ''
@@ -466,6 +514,7 @@ For nI := 1 to nTamI
 Next nI
 
 Return Nil
+*/
 
 /* -------------- */
 
@@ -561,7 +610,7 @@ PutSx1(PadR(cPerg,nTamGrp), '07', cNome, cNome, cNome,;
 '', '', '',;
 '', '', '',;
 aClone(aHelpPor), aClone(aHelpEng), aClone(aHelpSpa))
-
+/*
 aHelpPor := {}
 aAdd(aHelpPor, 'Selecione se deseja ajustar a        ')
 aAdd(aHelpPor, 'diferença nos CFOPs 5656, 5102 e 5405')
@@ -574,6 +623,7 @@ PutSx1(PadR(cPerg,nTamGrp), '08', cNome, cNome, cNome,;
 '', '', '',;
 '', '', '',;
 '', '', '',;
-aClone(aHelpPor), aClone(aHelpEng), aClone(aHelpSpa))
+aClone(aHelpPor), aClone(aHelpEng), aClone(aHelpSpa))  
+*/
 
 Return Nil

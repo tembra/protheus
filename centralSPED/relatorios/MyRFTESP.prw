@@ -37,7 +37,7 @@ ElseIf MV_PAR09 == 2 .and. MV_PAR08 == 5
 EndIf
 
 //ativa NOLOCK nas queries SQL caso seja referente a um ano anterior do corrente
-If Year(MV_PAR02) < Year(Date()) .and. TCGetDB() == 'MSSQL'
+If Year(MV_PAR02) < Year(Date()) .and. 'MSSQL' $ TCGetDB()
 	_cNoLock := 'WITH (NOLOCK)'
 EndIf
 

@@ -23,7 +23,7 @@ Default cCFPad := GetMV('MY_CFDEVPC')
 Default cCST := ''
  
 //ativa NOLOCK nas queries SQL caso seja referente a um ano anterior do corrente
-If Year(dDtFim) < Year(Date()) .and. TCGetDB() == 'MSSQL'
+If Year(dDtFim) < Year(Date()) .and. 'MSSQL' $ TCGetDB()
 	cNoLock := 'WITH (NOLOCK)'
 EndIf
 

@@ -386,7 +386,10 @@ cQry += CRLF + "   AND LEFT(FT_ENTRADA,6) BETWEEN '" + MV_PAR01 + "' AND '" + MV
 cQry += CRLF + "   AND FT_TIPOMOV = 'E'"
 cQry += CRLF + "   AND ("
 cQry += CRLF + "        RTRIM(FT_CFOP) IN " + cCFEnt
-cQry += CRLF + "     OR RTRIM(FT_CFOP) IN " + cCFFre
+cQry += CRLF + "     OR ("
+cQry += CRLF + "           RTRIM(FT_CFOP) IN " + cCFFre
+cQry += CRLF + "       AND FT_TIPO = 'C'"
+cQry += CRLF + "     )"
 cQry += CRLF + "   )"
 cQry += CRLF + "   AND LEN(FT_TNATREC) = 0"
 aQry[nPos] := cQry
@@ -727,6 +730,7 @@ cQry += CRLF + " AND F3_SERIE = FT_SERIE"
 cQry += CRLF + " AND F3_CLIEFOR = FT_CLIEFOR"
 cQry += CRLF + " AND F3_LOJA = FT_LOJA"
 cQry += CRLF + " AND F3_CFO = FT_CFOP"
+cQry += CRLF + " AND F3_ALIQICM = FT_ALIQICM"
 cQry += CRLF + " AND F3_TIPO = FT_TIPO"
 cQry += CRLF + " AND F3_IDENTFT = FT_IDENTF3"
 cQry += CRLF + " WHERE SFT.D_E_L_E_T_ <> '*'"
@@ -1115,6 +1119,7 @@ cQry += CRLF + " AND F3_SERIE = FT_SERIE"
 cQry += CRLF + " AND F3_CLIEFOR = FT_CLIEFOR"
 cQry += CRLF + " AND F3_LOJA = FT_LOJA"
 cQry += CRLF + " AND F3_CFO = FT_CFOP"
+cQry += CRLF + " AND F3_ALIQICM = FT_ALIQICM"
 cQry += CRLF + " AND F3_TIPO = FT_TIPO"
 cQry += CRLF + " AND F3_IDENTFT = FT_IDENTF3"
 cQry += CRLF + " WHERE SFT.D_E_L_E_T_ <> '*'"
